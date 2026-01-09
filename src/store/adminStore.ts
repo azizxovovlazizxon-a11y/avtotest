@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Question } from '../types'
+import { questions as realQuestions, getTotalBilets } from '../data/questions'
 
 interface AdminQuestion extends Question {
   createdAt: string
@@ -37,20 +38,27 @@ interface AdminStore {
   importQuestions: (questions: Omit<AdminQuestion, 'id' | 'createdAt' | 'updatedAt'>[]) => void
 }
 
-// Generate initial questions - starts empty, admin can add questions
+// Generate initial questions from real extracted data
 const generateInitialQuestions = (): AdminQuestion[] => {
-  return []
+  const now = new Date().toISOString()
+  return realQuestions.map(q => ({
+    ...q,
+    createdAt: now,
+    updatedAt: now,
+  }))
 }
 
-// Generate initial bilets
+// Generate initial bilets based on real data (111 bilets, 10 questions each)
 const generateInitialBilets = (): Bilet[] => {
   const bilets: Bilet[] = []
-  for (let i = 1; i <= 40; i++) {
-    const startId = (i - 1) * 25 + 1
+  const totalBilets = getTotalBilets()
+  for (let i = 1; i <= totalBilets; i++) {
+    // Each bilet has 10 questions
+    const startId = (i - 1) * 10 + 1
     bilets.push({
       id: i,
       name: `Bilet #${i}`,
-      questionIds: Array.from({ length: 20 }, (_, j) => startId + j), // First 20 questions of each bilet
+      questionIds: Array.from({ length: 10 }, (_, j) => startId + j),
       isActive: true,
     })
   }
@@ -62,7 +70,7 @@ export const useAdminStore = create<AdminStore>()(
     (set, get) => ({
       questions: generateInitialQuestions(),
       bilets: generateInitialBilets(),
-      nextQuestionId: 1001,
+      nextQuestionId: 2000, // Start after existing questions (1110 total)
 
       addQuestion: (question) => {
         const id = get().nextQuestionId
@@ -150,6 +158,18 @@ export const useAdminStore = create<AdminStore>()(
     }),
     {
       name: 'avtotest-admin-storage',
+      version: 2, // Increment version to force localStorage reset with real questions
+      migrate: (persistedState: unknown, version: number) => {
+        // If old version, discard old data and use fresh real questions
+        if (version < 2) {
+          return {
+            questions: generateInitialQuestions(),
+            bilets: generateInitialBilets(),
+            nextQuestionId: 2000,
+          }
+        }
+        return persistedState as AdminStore
+      },
     }
   )
 )

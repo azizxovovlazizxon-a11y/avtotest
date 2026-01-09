@@ -4,7 +4,7 @@ import { BookOpen, Layers, CheckCircle, ThumbsUp, TrendingUp } from 'lucide-reac
 import { BiletCard } from '../components/Cards'
 import { useAuthStore } from '../store/authStore'
 import { useExamStore } from '../store/examStore'
-import { getBiletInfo } from '../data/questions'
+import { getBiletInfo, BiletInfo, getTotalBilets } from '../data/questions'
 
 type FilterType = 'all' | 'new' | 'passed' | 'failed'
 
@@ -16,14 +16,15 @@ export default function Biletlar() {
   
   const bilets = getBiletInfo()
   const biletStats = getBiletStatistics()
+  const totalBilets = getTotalBilets()
 
   // Calculate statistics
   const completedBilets = Array.from(biletStats.values()).length
   const passedBilets = Array.from(biletStats.values()).filter(s => s.passed).length
-  const progress = Math.round((passedBilets / 40) * 100)
+  const progress = Math.round((passedBilets / totalBilets) * 100)
 
   // Filter bilets
-  const filteredBilets = bilets.filter(bilet => {
+  const filteredBilets = bilets.filter((bilet: BiletInfo) => {
     const stats = biletStats.get(bilet.id)
     switch (filter) {
       case 'new':
@@ -39,8 +40,8 @@ export default function Biletlar() {
 
   // Count for each filter
   const counts = {
-    all: 40,
-    new: bilets.filter(b => !biletStats.get(b.id)).length,
+    all: totalBilets,
+    new: bilets.filter((b: BiletInfo) => !biletStats.get(b.id)).length,
     passed: passedBilets,
     failed: completedBilets - passedBilets,
   }
@@ -58,7 +59,7 @@ export default function Biletlar() {
   }
 
   const handleStartBilet = (biletId: number) => {
-    const bilet = bilets.find(b => b.id === biletId)
+    const bilet = bilets.find((b: BiletInfo) => b.id === biletId)
     if (!bilet) return
 
     if (!bilet.isFree && !user?.isPremium) {
@@ -66,7 +67,7 @@ export default function Biletlar() {
       return
     }
 
-    startExam('bilet', 20, biletId)
+    startExam('bilet', 10, biletId)
     navigate(`/biletlar/${biletId}`)
   }
 
@@ -78,7 +79,7 @@ export default function Biletlar() {
         <h1 className="text-3xl font-bold text-slate-800">Biletlar</h1>
       </div>
       <p className="text-slate-500 mb-6">
-        40 ta bilet. Har bir biletda 20 ta savol. Biletni tanlang va mashq qiling.
+        {totalBilets} ta bilet. Har bir biletda 10 ta savol. Biletni tanlang va mashq qiling.
       </p>
 
       {/* Statistics cards */}
@@ -88,7 +89,7 @@ export default function Biletlar() {
             <p className="text-sm text-slate-600">Jami</p>
             <Layers className="text-slate-400" size={20} />
           </div>
-          <p className="text-3xl font-bold text-slate-800">40</p>
+          <p className="text-3xl font-bold text-slate-800">{totalBilets}</p>
           <p className="text-xs text-slate-500">Barcha biletlar soni</p>
         </div>
 
@@ -178,7 +179,7 @@ export default function Biletlar() {
 
       {/* Bilet cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBilets.map((bilet, index) => {
+        {filteredBilets.map((bilet: BiletInfo, index: number) => {
           const stats = biletStats.get(bilet.id)
           return (
             <BiletCard
