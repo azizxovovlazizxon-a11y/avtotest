@@ -300,12 +300,15 @@ export default function Exam() {
           {/* Question image */}
           {currentQuestion.imageUrl && (
             <div className="mb-6 bg-slate-100 rounded-xl p-6 flex items-center justify-center">
-              <div className="w-full max-w-sm h-48 bg-slate-200 rounded-lg flex items-center justify-center">
-                <div className="text-center text-slate-400">
-                  <Flag size={48} className="mx-auto mb-2" />
-                  <p className="text-sm">Yo'l belgisi rasmi</p>
-                </div>
-              </div>
+              <img 
+                src={currentQuestion.imageUrl} 
+                alt="Savol rasmi"
+                className="max-w-full max-h-96 rounded-lg object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
             </div>
           )}
 
