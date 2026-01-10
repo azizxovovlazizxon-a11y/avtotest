@@ -53,7 +53,7 @@ export default function BoshSahifa() {
             { label: 'BEPUL', type: 'free' },
           ]}
           stats={[
-            { label: 'Yechganlar soni:', value: standardExams.length },
+            { label: 'Sizning urinishlaringiz:', value: standardExams.length },
             { label: 'Sizning natijangiz:', value: standardExams.length > 0 ? `${standardExams[0].percentage}%` : '0%' },
           ]}
           buttonText="Testni boshlash"
@@ -70,7 +70,7 @@ export default function BoshSahifa() {
             { label: 'BEPUL', type: 'free' },
           ]}
           stats={[
-            { label: 'Yechganlar soni:', value: realExams.length },
+            { label: 'Sizning urinishlaringiz:', value: realExams.length },
             { label: 'Sizning natijangiz:', value: realExams.length > 0 ? `${realExams[0].percentage}%` : 'Hali yechilmagan' },
           ]}
           buttonText="Testni boshlash"
@@ -79,7 +79,7 @@ export default function BoshSahifa() {
 
         {/* Biletlar */}
         <TestCard
-          title="Biletlar (40 ta)"
+          title="Biletlar (111 ta)"
           gradient="card-gradient-purple"
           icon={<BookOpen size={24} className="text-slate-700" />}
           tags={[
@@ -87,8 +87,8 @@ export default function BoshSahifa() {
             { label: 'BEPUL', type: 'free' },
           ]}
           stats={[
-            { label: 'Yakunlangan biletlar:', value: `${examHistory.filter(e => e.examType === 'bilet').length} / 40` },
-            { label: 'Jami savollar:', value: '800 ta' },
+            { label: 'Yakunlangan biletlar:', value: `${examHistory.filter(e => e.examType === 'bilet').length} / 111` },
+            { label: 'Jami savollar:', value: '1110 ta' },
           ]}
           buttonText="Biletlarni ko'rish"
           buttonAction={() => navigate('/biletlar')}
