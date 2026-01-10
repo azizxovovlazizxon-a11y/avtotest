@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react'
 import { useExamStore } from '../store/examStore'
+import { YandexAdPlaceholder } from '../components/YandexAd'
 
 export default function Exam() {
   const { examType } = useParams<{ examType: string }>()
@@ -200,11 +201,9 @@ export default function Exam() {
         <div className="hidden xl:block w-40 flex-shrink-0 pt-4">
           <div className="sticky top-4">
             <p className="text-xs text-slate-400 mb-2 text-center">Reklama</p>
-            <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center" style={{ minHeight: '600px' }}>
-              <div className="text-center text-slate-400 -rotate-90">
-                <div className="text-2xl mb-1">📢</div>
-                <p className="text-xs whitespace-nowrap">160x600</p>
-              </div>
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              {/* <YandexAd blockId="R-A-XXXXXX-1" type="vertical" /> */}
+              <YandexAdPlaceholder type="vertical" />
             </div>
           </div>
         </div>
@@ -480,11 +479,9 @@ export default function Exam() {
       <div className="hidden xl:block w-40 flex-shrink-0 pt-4">
         <div className="sticky top-4">
           <p className="text-xs text-slate-400 mb-2 text-center">Reklama</p>
-          <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center" style={{ minHeight: '600px' }}>
-            <div className="text-center text-slate-400 -rotate-90">
-              <div className="text-2xl mb-1">📢</div>
-              <p className="text-xs whitespace-nowrap">160x600</p>
-            </div>
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            {/* <YandexAd blockId="R-A-XXXXXX-2" type="vertical" /> */}
+            <YandexAdPlaceholder type="vertical" />
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { FileText, Target, BookOpen } from 'lucide-react'
 import { TestCard } from '../components/Cards'
 import { useExamStore } from '../store/examStore'
+import { YandexAdPlaceholder } from '../components/YandexAd'
 
 export default function BoshSahifa() {
   const navigate = useNavigate()
@@ -99,13 +100,9 @@ export default function BoshSahifa() {
       <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
         <div className="text-center">
           <p className="text-xs text-slate-400 mb-2">Reklama</p>
-          <div className="bg-slate-100 rounded-xl flex items-center justify-center" style={{ minHeight: '250px' }}>
-            <div className="text-center text-slate-400">
-              <div className="text-4xl mb-2">📢</div>
-              <p className="text-sm font-medium">Reklama banneri</p>
-              <p className="text-xs">728x90 yoki 970x250</p>
-            </div>
-          </div>
+          {/* Replace 'YOUR-BLOCK-ID' with your actual Yandex.Direct block ID */}
+          {/* <YandexAd blockId="R-A-XXXXXX-X" type="square" /> */}
+          <YandexAdPlaceholder type="square" />
         </div>
       </div>
     </div>
