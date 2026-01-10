@@ -22,13 +22,15 @@ app.use(express.json())
 
 // Telegram Bot Setup
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'YOUR_BOT_TOKEN_HERE'
+const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://avtotest-8t98.onrender.com'
 const isBotConfigured = BOT_TOKEN && BOT_TOKEN !== 'YOUR_BOT_TOKEN_HERE' && BOT_TOKEN !== 'your_bot_token_here'
 
 let bot = null
 if (isBotConfigured) {
   try {
-    bot = new TelegramBot(BOT_TOKEN, { polling: true })
-    console.log('✅ Telegram bot is configured and active')
+    // Use webhooks instead of polling for better reliability
+    bot = new TelegramBot(BOT_TOKEN)
+    console.log('✅ Telegram bot is configured (webhook mode)')
   } catch (error) {
     console.log('⚠️  Telegram bot failed to start:', error.message)
   }
@@ -45,8 +47,19 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-// Bot command: /start
-if (bot) {
+// Telegram Webhook endpoint
+app.post('/webhook/telegram', (req, res) => {
+  if (bot) {
+    bot.processUpdate(req.body)
+  }
+  res.sendStatus(200)
+})
+
+// Bot message handlers
+function setupBotHandlers() {
+  if (!bot) return
+
+  // Bot command: /start
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id
     const firstName = msg.from.first_name || 'Foydalanuvchi'
@@ -100,6 +113,8 @@ if (bot) {
     )
   })
 }
+
+setupBotHandlers()
 
 // API Endpoints
 
@@ -205,23 +220,32 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    bot: bot && bot.isPolling() ? 'active' : 'not configured'
+    bot: bot ? 'configured (webhook)' : 'not configured'
   })
 })
 
 const PORT = process.env.PORT || 5000
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`)
+  
+  // Set up webhook
   if (isBotConfigured && bot) {
-    console.log(`🤖 Telegram bot @yol_qoidasi_uz_bot is ${bot.isPolling() ? 'active' : 'inactive'}`)
+    try {
+      const webhookUrl = `${WEBHOOK_URL}/webhook/telegram`
+      await bot.setWebHook(webhookUrl)
+      console.log(`🤖 Telegram bot webhook set to: ${webhookUrl}`)
+      console.log(`🤖 Telegram bot @yol_qoidasi_uz_bot is active`)
+    } catch (error) {
+      console.error('❌ Failed to set webhook:', error.message)
+    }
   }
 })
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   if (bot) {
-    bot.stopPolling()
+    await bot.deleteWebHook()
   }
   process.exit()
 })
