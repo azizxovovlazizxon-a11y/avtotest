@@ -172,10 +172,9 @@ export default function ExamResults() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  navigate('/', { replace: true })
+                onClick={() => {
+                  console.log('Bosh sahifa clicked')
+                  window.location.href = '/'
                 }}
                 className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-4 rounded-xl transition-colors cursor-pointer"
               >
@@ -184,10 +183,9 @@ export default function ExamResults() {
               </button>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  navigate(getRetryPath(), { replace: true })
+                onClick={() => {
+                  console.log('Qaytadan urinish clicked, path:', getRetryPath())
+                  window.location.href = getRetryPath()
                 }}
                 className="flex-1 flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-medium py-4 rounded-xl transition-colors cursor-pointer"
               >
