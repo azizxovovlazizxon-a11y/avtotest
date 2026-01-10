@@ -31,6 +31,7 @@ export default function Exam() {
     isCorrect: boolean
     correctAnswer: number
   } | null>(null)
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
   const autoAdvanceTimer = useRef<number | null>(null)
 
   // Initialize timer for real exam
@@ -303,7 +304,8 @@ export default function Exam() {
               <img 
                 src={currentQuestion.imageUrl} 
                 alt="Savol rasmi"
-                className="max-w-full max-h-96 rounded-lg object-contain"
+                className="max-w-full max-h-96 rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setFullscreenImage(currentQuestion.imageUrl!)}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -487,6 +489,31 @@ export default function Exam() {
         </div>
       </div>
       </div>
+
+      {/* Fullscreen Image Viewer */}
+      {fullscreenImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
+          onClick={() => setFullscreenImage(null)}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setFullscreenImage(null)}
+            className="absolute top-4 right-4 p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors z-10"
+            aria-label="Yopish"
+          >
+            <X size={24} className="text-white" />
+          </button>
+          
+          {/* Image */}
+          <img
+            src={fullscreenImage}
+            alt="To'liq ekranda rasm"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }
