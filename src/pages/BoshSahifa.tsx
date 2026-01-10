@@ -16,7 +16,7 @@ export default function BoshSahifa() {
     <div className="animate-fadeIn">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">Test Paperlari</h1>
+        <h1 className="text-3xl font-bold text-slate-800 mb-2">Avto Test</h1>
         <p className="text-slate-500">
           O'zbekiston Respublikasi yo'l harakati qoidalari bo'yicha test sinovlari
         </p>
