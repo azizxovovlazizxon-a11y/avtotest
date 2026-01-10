@@ -11,6 +11,9 @@ import TarixStatistika from './pages/TarixStatistika'
 import ProVersiya from './pages/ProVersiya'
 import Exam from './pages/Exam'
 import ExamResults from './pages/ExamResults'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import About from './pages/About'
 
 // Admin pages
 import AdminLayout from './pages/admin/AdminLayout'
@@ -49,6 +52,9 @@ function App() {
                 <Route path="/biletlar/:biletId" element={<BiletTest />} />
                 <Route path="/tarix-statistika" element={<TarixStatistika />} />
                 <Route path="/pro-versiya" element={<ProVersiya />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/about" element={<About />} />
               </Routes>
             </Layout>
           }
