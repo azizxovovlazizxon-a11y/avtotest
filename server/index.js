@@ -492,45 +492,13 @@ app.get('/api/questions/bilet/:biletId', authLimiter, (req, res) => {
   })
 })
 
-// Questions API - Get random questions for exam (authenticated users get access)
-app.get('/api/questions/random', authLimiter, (req, res) => {
-  const authHeader = req.headers.authorization
-  const { count = 10, isFreeAttempt = 'false' } = req.query
+// Questions API - Get random questions for exam (always allowed for standard/real exams)
+app.get('/api/questions/random', apiLimiter, (req, res) => {
+  const { count = 10 } = req.query
   const questionCount = parseInt(count)
   
-  // Allow one free attempt without authentication
-  if (isFreeAttempt === 'true') {
-    // Get random questions for free attempt
-    const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
-    const randomQuestions = shuffled.slice(0, questionCount)
-    
-    return res.json({
-      success: true,
-      count: questionCount,
-      questions: randomQuestions
-    })
-  }
-  
-  // For subsequent attempts, require authentication
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      success: false,
-      message: 'Avtorizatsiya talab qilinadi'
-    })
-  }
-  
-  const token = authHeader.substring(7)
-  const session = userSessions.get(token)
-  
-  if (!session) {
-    return res.status(401).json({
-      success: false,
-      message: 'Yaroqsiz sessiya. Iltimos, qaytadan kiring'
-    })
-  }
-  
-  // Authenticated users can take exams (Pro check removed - all authenticated users have access)
-  // Get random questions
+  // Random questions are always available (no auth needed)
+  // This is for standard and real exams where questions are randomly selected
   const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
   const randomQuestions = shuffled.slice(0, questionCount)
   
