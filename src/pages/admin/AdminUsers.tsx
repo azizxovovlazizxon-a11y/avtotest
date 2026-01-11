@@ -19,25 +19,27 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Fetch users from backend API
-    // For now, showing example data structure
-    setLoading(false)
-    
-    // Example data - replace with actual API call
-    const exampleUsers: User[] = [
-      {
-        id: '1',
-        telegramId: '123456789',
-        phone: '+998901234567',
-        name: 'Test User',
-        isPro: true,
-        proExpiresAt: new Date('2026-02-01'),
-        createdAt: new Date('2026-01-01'),
-        lastLoginAt: new Date('2026-01-11'),
-      }
-    ]
-    setUsers(exampleUsers)
+    fetchUsers()
   }, [])
+
+  const fetchUsers = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/users')
+      const data = await response.json()
+      
+      if (data.success) {
+        setUsers(data.users)
+      } else {
+        alert('Foydalanuvchilarni yuklashda xatolik')
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      alert('Server bilan bog\'lanishda xatolik')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
@@ -65,20 +67,45 @@ export default function AdminUsers() {
   }
 
   const toggleProStatus = async (userId: string) => {
-    // TODO: Implement API call to toggle pro status
     const user = users.find(u => u.id === userId)
     if (!user) return
 
     const newProStatus = !user.isPro
-    const proExpiresAt = newProStatus ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : undefined
+    const confirmMessage = newProStatus 
+      ? 'Bu foydalanuvchiga Pro status berilsinmi?' 
+      : 'Bu foydalanuvchidan Pro status olib tashlansinmi?'
+    
+    if (!confirm(confirmMessage)) return
 
-    setUsers(users.map(u => 
-      u.id === userId 
-        ? { ...u, isPro: newProStatus, proExpiresAt }
-        : u
-    ))
+    try {
+      const response = await fetch(`https://avtotest-8t98.onrender.com/api/admin/users/${user.telegramId}/pro`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isPro: newProStatus,
+          expirationDays: newProStatus ? 30 : 0
+        })
+      })
 
-    alert(`Foydalanuvchi ${newProStatus ? 'Pro' : 'Free'} statusiga o'zgartirildi`)
+      const data = await response.json()
+      
+      if (data.success) {
+        // Update local state
+        setUsers(users.map(u => 
+          u.id === userId 
+            ? { ...u, ...data.user }
+            : u
+        ))
+        alert(`Foydalanuvchi ${newProStatus ? 'Pro' : 'Free'} statusiga o'zgartirildi`)
+      } else {
+        alert('Xatolik yuz berdi')
+      }
+    } catch (error) {
+      console.error('Error updating user:', error)
+      alert('Server bilan bog\'lanishda xatolik')
+    }
   }
 
   return (
@@ -254,11 +281,10 @@ export default function AdminUsers() {
       </div>
 
       {/* Info box */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Eslatma:</strong> Hozirda bu sahifa misol ma'lumotlarini ko'rsatmoqda. 
-          Backend API bilan integratsiya qilish kerak. Foydalanuvchi ma'lumotlari backend 
-          serverdan yuklanadi va barcha o'zgarishlar backend orqali saqlanadi.
+      <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4">
+        <p className="text-sm text-green-800">
+          <strong>✓ Real ma'lumotlar:</strong> Bu sahifa backend serverdan haqiqiy foydalanuvchi 
+          ma'lumotlarini ko'rsatmoqda. Barcha o'zgarishlar darhol saqlashadi.
         </p>
       </div>
     </div>

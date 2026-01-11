@@ -41,6 +41,7 @@ if (isBotConfigured) {
 // In-memory storage (use database in production)
 const otpStore = new Map() // telegramId -> { otp, phone, name, expiresAt }
 const userSessions = new Map() // sessionToken -> { telegramId, phone, name }
+const usersDatabase = new Map() // telegramId -> { id, telegramId, phone, name, isPro, proExpiresAt, createdAt, lastLoginAt }
 
 // Generate 6-digit OTP
 function generateOTP() {
@@ -163,6 +164,25 @@ app.post('/api/auth/verify-otp', (req, res) => {
   
   // Create session token
   const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2)}`
+  
+  // Save or update user in database
+  if (!usersDatabase.has(foundUser.telegramId)) {
+    usersDatabase.set(foundUser.telegramId, {
+      id: foundUser.telegramId,
+      telegramId: foundUser.telegramId,
+      phone: foundUser.phone,
+      name: foundUser.name,
+      isPro: false,
+      proExpiresAt: null,
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString()
+    })
+  } else {
+    // Update last login
+    const user = usersDatabase.get(foundUser.telegramId)
+    user.lastLoginAt = new Date().toISOString()
+  }
+  
   userSessions.set(sessionToken, {
     telegramId: foundUser.telegramId,
     phone: foundUser.phone,
@@ -213,6 +233,45 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({
     success: true,
     message: 'Tizimdan muvaffaqiyatli chiqdingiz'
+  })
+})
+
+// Admin API - Get all users
+app.get('/api/admin/users', (req, res) => {
+  const users = Array.from(usersDatabase.values())
+  res.json({
+    success: true,
+    users: users
+  })
+})
+
+// Admin API - Update user Pro status
+app.put('/api/admin/users/:telegramId/pro', (req, res) => {
+  const { telegramId } = req.params
+  const { isPro, expirationDays } = req.body
+  
+  const user = usersDatabase.get(telegramId)
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Foydalanuvchi topilmadi'
+    })
+  }
+  
+  user.isPro = isPro
+  if (isPro && expirationDays) {
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + expirationDays)
+    user.proExpiresAt = expiresAt.toISOString()
+  } else {
+    user.proExpiresAt = null
+  }
+  
+  usersDatabase.set(telegramId, user)
+  
+  res.json({
+    success: true,
+    user: user
   })
 })
 
