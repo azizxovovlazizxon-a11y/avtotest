@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { User } from '../types'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 interface AuthState {
   user: User | null
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
 
       verifyOTP: async (otp: string) => {
         try {
-          const response = await axios.post(`${API_URL}/auth/verify-otp`, { otp })
+          const response = await axios.post(`${API_URL}/api/auth/verify-otp`, { otp })
           
           if (response.data.success) {
             const { token, user: userData } = response.data
@@ -64,7 +64,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         const { token } = get()
         if (token) {
-          axios.post(`${API_URL}/auth/logout`, { token }).catch(() => {})
+          axios.post(`${API_URL}/api/auth/logout`, { token }).catch(() => {})
         }
         // Remove token from localStorage
         localStorage.removeItem('authToken')
