@@ -533,18 +533,25 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
     // Get image metadata
     const metadata = await sharp(imageBuffer).metadata()
     
-    // Create watermark text overlay
+    // Create watermark text overlay with better visibility
+    const fontSize = Math.max(24, Math.floor(metadata.width / 25))
     const watermarkSvg = `
       <svg width="${metadata.width}" height="${metadata.height}">
+        <defs>
+          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="black" flood-opacity="0.8"/>
+          </filter>
+        </defs>
         <style>
           .watermark { 
-            fill: rgba(255, 255, 255, 0.5); 
-            font-size: ${Math.max(20, Math.floor(metadata.width / 20))}px; 
+            fill: rgba(255, 255, 255, 0.9); 
+            font-size: ${fontSize}px; 
             font-family: Arial, sans-serif; 
             font-weight: bold;
+            filter: url(#shadow);
           }
         </style>
-        <text x="50%" y="95%" text-anchor="middle" class="watermark">yo'lqoidasi.uz</text>
+        <text x="50%" y="96%" text-anchor="middle" class="watermark">yo'lqoidasi.uz</text>
       </svg>
     `
     
@@ -552,7 +559,7 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
     const watermarkedImage = await sharp(imageBuffer)
       .composite([{
         input: Buffer.from(watermarkSvg),
-        gravity: 'southeast'
+        gravity: 'south'
       }])
       .webp()
       .toBuffer()

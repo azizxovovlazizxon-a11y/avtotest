@@ -35,6 +35,7 @@ export default function Exam() {
   } | null>(null)
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
   const [imageCache, setImageCache] = useState<Map<string, string>>(new Map())
+  const [imageLoading, setImageLoading] = useState(false)
   const autoAdvanceTimer = useRef<number | null>(null)
 
   // Initialize timer for real exam
@@ -93,20 +94,27 @@ export default function Exam() {
   // Load image with authentication when question changes
   useEffect(() => {
     if (currentQuestion.imageUrl && !imageCache.has(currentQuestion.imageUrl)) {
+      setImageLoading(true)
       fetchImageWithAuth(currentQuestion.imageUrl)
         .then(blobUrl => {
           setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, blobUrl))
+          setImageLoading(false)
         })
         .catch(err => {
-          console.error('Failed to load image:', err)
+          console.error('Failed to load watermarked image:', err)
+          // Fallback to original image if watermarking fails
+          setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, currentQuestion.imageUrl!))
+          setImageLoading(false)
         })
     }
   }, [currentQuestion.imageUrl, imageCache])
 
-  // Get cached image URL or original
+  // Get cached image URL - never use original directly
   const getImageSrc = (imageUrl: string | undefined) => {
     if (!imageUrl) return ''
-    return imageCache.get(imageUrl) || imageUrl
+    const cached = imageCache.get(imageUrl)
+    // Return cached version or empty string if not loaded yet
+    return cached || ''
   }
 
   // Restore or clear feedback when question changes
@@ -320,17 +328,28 @@ export default function Exam() {
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
           {/* Question image */}
           {currentQuestion.imageUrl && (
-            <div className="mb-6 bg-slate-100 rounded-xl p-6 flex items-center justify-center">
-              <img 
-                src={getImageSrc(currentQuestion.imageUrl)} 
-                alt="Savol rasmi"
-                className="max-w-full max-h-96 rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setFullscreenImage(getImageSrc(currentQuestion.imageUrl!))}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
+            <div className="mb-6 bg-slate-100 rounded-xl p-6 flex items-center justify-center relative">
+              {imageLoading && !imageCache.has(currentQuestion.imageUrl) ? (
+                <div className="flex flex-col items-center justify-center py-24">
+                  <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-slate-500 text-sm">Rasm yuklanmoqda...</p>
+                </div>
+              ) : getImageSrc(currentQuestion.imageUrl) ? (
+                <img 
+                  src={getImageSrc(currentQuestion.imageUrl)} 
+                  alt="Savol rasmi"
+                  className="max-w-full max-h-96 rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setFullscreenImage(getImageSrc(currentQuestion.imageUrl!))}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="py-24 text-slate-400">
+                  <p>Rasm yuklanmadi</p>
+                </div>
+              )}
             </div>
           )}
 
