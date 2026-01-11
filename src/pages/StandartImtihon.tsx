@@ -6,13 +6,14 @@ import { useExamStore } from '../store/examStore'
 
 export default function StandartImtihon() {
   const [questionCount, setQuestionCount] = useState<20 | 50>(20)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { user, canTakeExam, incrementFreeAttempt, isAuthenticated } = useAuthStore()
   const { startExam } = useExamStore()
 
   const canStartExam = canTakeExam()
 
-  const handleStartExam = () => {
+  const handleStartExam = async () => {
     if (!canStartExam) {
       // Redirect to Pro version or auth page
       if (!isAuthenticated) {
@@ -23,14 +24,20 @@ export default function StandartImtihon() {
       return
     }
 
-    startExam('standard', questionCount)
-    
-    // Track free attempt usage if not authenticated or not premium
-    if (!isAuthenticated) {
-      incrementFreeAttempt()
-    }
+    setLoading(true)
+    try {
+      await startExam('standard', questionCount)
+      
+      // Track free attempt usage if not authenticated or not premium
+      if (!isAuthenticated) {
+        incrementFreeAttempt()
+      }
 
-    navigate('/exam/standard')
+      navigate('/exam/standard')
+    } catch (error) {
+      alert('Imtihonni boshlashda xatolik: ' + (error as Error).message)
+      setLoading(false)
+    }
   }
 
   return (
@@ -179,11 +186,21 @@ export default function StandartImtihon() {
           {/* Start button */}
           <button
             onClick={handleStartExam}
-            disabled={!canStartExam && !user?.isPremium}
+            disabled={(!canStartExam && !user?.isPremium) || loading}
             className="w-full btn-primary py-4 text-lg"
           >
-            <Play size={20} />
-            Imtihonni Boshlash
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Yuklanmoqda...
+              </>
+            ) : (
+              <>
+                <Play size={20} />
+                Imtihonni Boshlash
+              </>
+            )}
+          </button>
           </button>
         </div>
       </div>

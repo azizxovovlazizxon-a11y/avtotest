@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ExamResult, ExamSession, Question } from '../types'
-import { useAdminStore } from './adminStore'
+import { fetchBiletQuestions, fetchRandomQuestions } from '../services/api'
 
 interface ExamState {
   currentSession: ExamSession | null
   examHistory: ExamResult[]
-  startExam: (examType: 'standard' | 'real' | 'bilet', questionCount: number, biletId?: number) => void
+  startExam: (examType: 'standard' | 'real' | 'bilet', questionCount: number, biletId?: number) => Promise<void>
   answerQuestion: (questionId: number, answer: number) => void
   nextQuestion: () => void
   previousQuestion: () => void
@@ -30,30 +30,34 @@ export const useExamStore = create<ExamState>()(
       currentSession: null,
       examHistory: [],
 
-      startExam: (examType, questionCount, biletId) => {
-        const adminStore = useAdminStore.getState()
-        let questions: Question[]
-        
-        if (examType === 'bilet' && biletId !== undefined) {
-          // For bilet exams: use fixed questions from bilet
-          questions = adminStore.getQuestionsForBilet(biletId)
-        } else {
-          // For standard and real exams: get random questions
-          questions = adminStore.getRandomQuestions(questionCount)
-        }
+      startExam: async (examType, questionCount, biletId) => {
+        try {
+          let questions: Question[]
+          
+          if (examType === 'bilet' && biletId !== undefined) {
+            // For bilet exams: fetch questions from API
+            questions = await fetchBiletQuestions(biletId)
+          } else {
+            // For standard and real exams: fetch random questions
+            questions = await fetchRandomQuestions(questionCount)
+          }
 
-        const session: ExamSession = {
-          examType,
-          biletId,
-          questions,
-          currentQuestionIndex: 0,
-          answers: new Map(),
-          startTime: new Date(),
-          timeLimit: examType === 'real' ? 20 * 60 : undefined, // 20 minutes for real exam
-          questionCount,
-        }
+          const session: ExamSession = {
+            examType,
+            biletId,
+            questions,
+            currentQuestionIndex: 0,
+            answers: new Map(),
+            startTime: new Date(),
+            timeLimit: examType === 'real' ? 20 * 60 : undefined, // 20 minutes for real exam
+            questionCount,
+          }
 
-        set({ currentSession: session })
+          set({ currentSession: session })
+        } catch (error) {
+          console.error('Error starting exam:', error)
+          throw error
+        }
       },
 
       answerQuestion: (questionId, answer) => {

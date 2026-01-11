@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Lock, Eye, EyeOff } from 'lucide-react'
-import { useAuthStore } from '../../store/authStore'
+import { Shield, Lock, Eye, EyeOff, User } from 'lucide-react'
 
 export default function AdminLogin() {
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { adminLogin } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,10 +16,26 @@ export default function AdminLogin() {
     setLoading(true)
 
     try {
-      await adminLogin(password)
-      navigate('/admin')
+      const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Save admin token to localStorage
+        localStorage.setItem('adminToken', data.token)
+        localStorage.setItem('adminUsername', data.admin.username)
+        navigate('/admin')
+      } else {
+        setError(data.message || 'Noto\'g\'ri login yoki parol')
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik yuz berdi')
+      setError('Server bilan bog\'lanishda xatolik')
     } finally {
       setLoading(false)
     }
@@ -41,10 +56,29 @@ export default function AdminLogin() {
         {/* Login Form */}
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Username Input */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Login
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Loginni kiriting"
+                  required
+                  autoComplete="username"
+                />
+              </div>
+            </div>
+
             {/* Password Input */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Admin paroli
+                Parol
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -55,6 +89,7 @@ export default function AdminLogin() {
                   className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="Parolni kiriting"
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -76,7 +111,7 @@ export default function AdminLogin() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !password}
+              disabled={loading || !username || !password}
               className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-teal-500/50"
             >
               {loading ? 'Tekshirilmoqda...' : 'Kirish'}
@@ -85,7 +120,7 @@ export default function AdminLogin() {
             {/* Info */}
             <div className="text-center">
               <p className="text-xs text-slate-400">
-                Demo: parol - <span className="text-teal-400 font-mono">admin123</span>
+                Default: login - <span className="text-teal-400 font-mono">admin</span>, parol - <span className="text-teal-400 font-mono">admin123</span>
               </p>
             </div>
           </form>

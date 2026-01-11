@@ -4,10 +4,21 @@ import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import { readFileSync } from 'fs'
 import rateLimit from 'express-rate-limit'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+// Load questions data
+let questionsData = []
+try {
+  const questionsFile = readFileSync(join(__dirname, 'questions-data.json'), 'utf8')
+  questionsData = JSON.parse(questionsFile)
+  console.log(`✅ Loaded ${questionsData.length} questions from database`)
+} catch (error) {
+  console.error('⚠️  Failed to load questions:', error.message)
+}
 
 dotenv.config({ path: join(__dirname, '.env') })
 
@@ -359,6 +370,44 @@ app.put('/api/admin/users/:telegramId/pro', requireAdmin, (req, res) => {
   })
 })
 
+// Questions API - Get bilet info (requires auth)
+app.get('/api/questions/bilets', authLimiter, (req, res) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'Avtorizatsiya talab qilinadi'
+    })
+  }
+  
+  const token = authHeader.substring(7)
+  const session = userSessions.get(token)
+  
+  if (!session) {
+    return res.status(401).json({
+      success: false,
+      message: 'Yaroqsiz sessiya. Iltimos, qaytadan kiring'
+    })
+  }
+  
+  // Get all unique bilet IDs and create info
+  const biletIds = [...new Set(questionsData.map(q => q.biletId))].sort((a, b) => a - b)
+  const biletInfos = biletIds.map(id => {
+    const biletQuestions = questionsData.filter(q => q.biletId === id)
+    return {
+      id: id,
+      number: id,
+      questionsCount: biletQuestions.length,
+      isFree: id <= 5
+    }
+  })
+  
+  res.json({
+    success: true,
+    bilets: biletInfos
+  })
+})
+
 // Questions API - Get questions by bilet (protected, requires auth)
 app.get('/api/questions/bilet/:biletId', authLimiter, (req, res) => {
   const authHeader = req.headers.authorization
@@ -382,14 +431,22 @@ app.get('/api/questions/bilet/:biletId', authLimiter, (req, res) => {
   const { biletId } = req.params
   const biletNumber = parseInt(biletId)
   
-  // Import questions dynamically (we'll add the data later)
-  // For now, send empty array
-  // TODO: Add questions database
+  // Check if user has access (first 5 bilets are free)
+  const user = usersDatabase.get(session.telegramId)
+  if (biletNumber > 5 && (!user || !user.isPro)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Bu bilet faqat Pro foydalanuvchilar uchun'
+    })
+  }
+  
+  // Get questions for this bilet
+  const biletQuestions = questionsData.filter(q => q.biletId === biletNumber)
   
   res.json({
     success: true,
     biletId: biletNumber,
-    questions: [] // Will be populated with real questions
+    questions: biletQuestions
   })
 })
 
@@ -424,12 +481,14 @@ app.get('/api/questions/random', authLimiter, (req, res) => {
   const { count = 10 } = req.query
   const questionCount = parseInt(count)
   
-  // TODO: Add random question selection from database
+  // Get random questions
+  const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
+  const randomQuestions = shuffled.slice(0, questionCount)
   
   res.json({
     success: true,
     count: questionCount,
-    questions: [] // Will be populated with random questions
+    questions: randomQuestions
   })
 })
 

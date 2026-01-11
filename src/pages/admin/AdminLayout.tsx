@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { 
   LayoutDashboard, 
   FileQuestion, 
@@ -9,7 +10,6 @@ import {
   LogOut,
   Users
 } from 'lucide-react'
-import { useAuthStore } from '../../store/authStore'
 
 const adminMenuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -22,11 +22,34 @@ const adminMenuItems = [
 
 export default function AdminLayout() {
   const navigate = useNavigate()
-  const { adminLogout } = useAuthStore()
 
-  const handleLogout = () => {
+  // Check if admin is logged in
+  useEffect(() => {
+    const adminToken = localStorage.getItem('adminToken')
+    if (!adminToken) {
+      navigate('/admin/login')
+    }
+  }, [navigate])
+
+  const handleLogout = async () => {
     if (confirm('Admin paneldan chiqmoqchimisiz?')) {
-      adminLogout()
+      const adminToken = localStorage.getItem('adminToken')
+      
+      // Call logout API
+      try {
+        await fetch('https://avtotest-8t98.onrender.com/api/admin/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        })
+      } catch (error) {
+        console.error('Logout error:', error)
+      }
+      
+      // Clear local storage
+      localStorage.removeItem('adminToken')
+      localStorage.removeItem('adminUsername')
       navigate('/admin/login')
     }
   }

@@ -25,13 +25,20 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/users')
+      // Get admin token from localStorage
+      const adminToken = localStorage.getItem('adminToken')
+      
+      const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/users', {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      })
       const data = await response.json()
       
       if (data.success) {
         setUsers(data.users)
       } else {
-        alert('Foydalanuvchilarni yuklashda xatolik')
+        alert('Foydalanuvchilarni yuklashda xatolik: ' + data.message)
       }
     } catch (error) {
       console.error('Error fetching users:', error)
@@ -78,10 +85,14 @@ export default function AdminUsers() {
     if (!confirm(confirmMessage)) return
 
     try {
+      // Get admin token from localStorage
+      const adminToken = localStorage.getItem('adminToken')
+      
       const response = await fetch(`https://avtotest-8t98.onrender.com/api/admin/users/${user.telegramId}/pro`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
         },
         body: JSON.stringify({
           isPro: newProStatus,
@@ -100,7 +111,7 @@ export default function AdminUsers() {
         ))
         alert(`Foydalanuvchi ${newProStatus ? 'Pro' : 'Free'} statusiga o'zgartirildi`)
       } else {
-        alert('Xatolik yuz berdi')
+        alert('Xatolik yuz berdi: ' + data.message)
       }
     } catch (error) {
       console.error('Error updating user:', error)
