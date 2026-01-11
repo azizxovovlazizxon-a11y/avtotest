@@ -1,5 +1,9 @@
-import { Crown, Infinity, TrendingUp, Zap, Download, Check, Star } from 'lucide-react'
+import { Crown, Infinity, TrendingUp, Zap, Download, Check, Star, Tag } from 'lucide-react'
+import { useState } from 'react'
 import { useAuthStore } from '../store/authStore'
+import axios from 'axios'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const features = [
   {
@@ -76,11 +80,53 @@ const plans = [
 ]
 
 export default function ProVersiya() {
-  const { user } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
+  const [promoCode, setPromoCode] = useState('')
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoError, setPromoError] = useState('')
 
   const handleSubscribe = (planId: string) => {
     // TODO: Integrate with payment gateway (Payme, Click, Uzum)
     alert('To\'lov tizimi integratsiyasi hali qo\'shilmagan')
+  }
+
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoError('Promokod kiriting')
+      return
+    }
+
+    setPromoLoading(true)
+    setPromoError('')
+
+    try {
+      const token = localStorage.getItem('authToken')
+      const response = await axios.post(
+        `${API_URL}/api/promo/apply`,
+        { code: promoCode },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      if (response.data.success) {
+        // Update user with new premium status
+        updateUser({
+          isPremium: true,
+          premiumExpiresAt: response.data.expiresAt,
+          freeStandardAttempts: 999,
+          freeRealAttempts: 999,
+        })
+        alert('Promokod muvaffaqiyatli faollashtirildi!')
+        setPromoCode('')
+      }
+    } catch (error: any) {
+      setPromoError(error.response?.data?.message || 'Promokod yaroqsiz')
+    } finally {
+      setPromoLoading(false)
+    }
   }
 
   return (
@@ -132,8 +178,8 @@ export default function ProVersiya() {
             }`}
           >
             {plan.isPopular && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-amber-500 text-white text-xs font-bold px-4 py-1 rounded-full uppercase">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                <span className="bg-amber-500 text-white text-xs font-bold px-4 py-1 rounded-full uppercase whitespace-nowrap">
                   OMMABOP
                 </span>
               </div>
@@ -185,26 +231,38 @@ export default function ProVersiya() {
         ))}
       </div>
 
-      {/* Payment methods info */}
-      <div className="mt-8 bg-slate-50 rounded-xl p-6">
-        <h3 className="font-bold text-slate-800 mb-2">To'lov usullari</h3>
-        <p className="text-slate-600 mb-4">
-          Quyidagi to'lov usullaridan foydalanishingiz mumkin:
-        </p>
-        <div className="flex flex-wrap gap-4">
-          <div className="bg-white px-4 py-2 rounded-lg shadow-sm font-medium text-slate-700">
-            Payme
-          </div>
-          <div className="bg-white px-4 py-2 rounded-lg shadow-sm font-medium text-slate-700">
-            Click
-          </div>
-          <div className="bg-white px-4 py-2 rounded-lg shadow-sm font-medium text-slate-700">
-            Uzum Bank
-          </div>
-          <div className="bg-white px-4 py-2 rounded-lg shadow-sm font-medium text-slate-700">
-            Bank kartasi
-          </div>
+      {/* Promocode section */}
+      <div className="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Tag className="text-purple-600" size={24} />
+          <h3 className="font-bold text-slate-800">Promokod bormi?</h3>
         </div>
+        <p className="text-slate-600 mb-4">
+          Promokodni kiriting va premium imkoniyatlardan foydalaning
+        </p>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={promoCode}
+            onChange={(e) => {
+              setPromoCode(e.target.value.toUpperCase())
+              setPromoError('')
+            }}
+            placeholder="PROMO2024"
+            className="flex-1 px-4 py-3 rounded-xl border-2 border-purple-200 focus:border-purple-500 focus:outline-none uppercase"
+            disabled={promoLoading}
+          />
+          <button
+            onClick={handleApplyPromoCode}
+            disabled={promoLoading || !promoCode.trim()}
+            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {promoLoading ? 'Tekshirilmoqda...' : 'Faollashtirish'}
+          </button>
+        </div>
+        {promoError && (
+          <p className="mt-2 text-red-500 text-sm">{promoError}</p>
+        )}
       </div>
     </div>
   )

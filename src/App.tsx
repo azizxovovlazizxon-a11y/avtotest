@@ -22,6 +22,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminQuestions from './pages/admin/AdminQuestions'
 import AdminBilets from './pages/admin/AdminBilets'
+import AdminPromoCodes from './pages/admin/AdminPromoCodes'
 import AdminData from './pages/admin/AdminData'
 import AdminSettings from './pages/admin/AdminSettings'
 
@@ -68,6 +69,7 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="questions" element={<AdminQuestions />} />
           <Route path="bilets" element={<AdminBilets />} />
+          <Route path="promocodes" element={<AdminPromoCodes />} />
           <Route path="data" element={<AdminData />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

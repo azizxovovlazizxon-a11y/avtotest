@@ -600,6 +600,198 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
   }
 })
 
+// ===== PROMO CODE SYSTEM =====
+// In-memory storage for promocodes (in production use MongoDB)
+const promoCodes = new Map()
+
+// Admin: Create promo code
+app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
+  try {
+    const { code, durationMonths, maxUses, expiresInDays } = req.body
+
+    if (!code || !durationMonths || !maxUses) {
+      return res.status(400).json({
+        success: false,
+        message: 'Barcha maydonlarni to\'ldiring'
+      })
+    }
+
+    if (promoCodes.has(code.toUpperCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bu promokod allaqachon mavjud'
+      })
+    }
+
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + (expiresInDays || 30))
+
+    const promoCode = {
+      code: code.toUpperCase(),
+      durationMonths: parseInt(durationMonths),
+      maxUses: parseInt(maxUses),
+      usedCount: 0,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      expiresAt: expiresAt.toISOString()
+    }
+
+    promoCodes.set(promoCode.code, promoCode)
+
+    res.json({
+      success: true,
+      promoCode
+    })
+  } catch (error) {
+    console.error('Error creating promocode:', error)
+    res.status(500).json({ success: false, message: 'Server xatosi' })
+  }
+})
+
+// Admin: Get all promo codes
+app.get('/api/admin/promocodes', requireAdmin, (req, res) => {
+  try {
+    const allPromoCodes = Array.from(promoCodes.values())
+    res.json({
+      success: true,
+      promoCodes: allPromoCodes
+    })
+  } catch (error) {
+    console.error('Error fetching promocodes:', error)
+    res.status(500).json({ success: false, message: 'Server xatosi' })
+  }
+})
+
+// Admin: Update promo code
+app.patch('/api/admin/promocodes/:code', requireAdmin, (req, res) => {
+  try {
+    const { code } = req.params
+    const { isActive } = req.body
+
+    const promoCode = promoCodes.get(code.toUpperCase())
+    if (!promoCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Promokod topilmadi'
+      })
+    }
+
+    promoCode.isActive = isActive
+    promoCodes.set(code.toUpperCase(), promoCode)
+
+    res.json({
+      success: true,
+      promoCode
+    })
+  } catch (error) {
+    console.error('Error updating promocode:', error)
+    res.status(500).json({ success: false, message: 'Server xatosi' })
+  }
+})
+
+// Admin: Delete promo code
+app.delete('/api/admin/promocodes/:code', requireAdmin, (req, res) => {
+  try {
+    const { code } = req.params
+    
+    if (!promoCodes.has(code.toUpperCase())) {
+      return res.status(404).json({
+        success: false,
+        message: 'Promokod topilmadi'
+      })
+    }
+
+    promoCodes.delete(code.toUpperCase())
+
+    res.json({
+      success: true,
+      message: 'Promokod o\'chirildi'
+    })
+  } catch (error) {
+    console.error('Error deleting promocode:', error)
+    res.status(500).json({ success: false, message: 'Server xatosi' })
+  }
+})
+
+// User: Apply promo code
+app.post('/api/promo/apply', authLimiter, (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Avtorizatsiya talab qilinadi'
+      })
+    }
+    
+    const token = authHeader.substring(7)
+    const session = userSessions.get(token)
+    
+    if (!session) {
+      return res.status(401).json({
+        success: false,
+        message: 'Yaroqsiz sessiya'
+      })
+    }
+
+    const { code } = req.body
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Promokod kiriting'
+      })
+    }
+
+    const promoCode = promoCodes.get(code.toUpperCase())
+    
+    if (!promoCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Promokod topilmadi'
+      })
+    }
+
+    if (!promoCode.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Promokod nofaol'
+      })
+    }
+
+    if (new Date(promoCode.expiresAt) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Promokod muddati tugagan'
+      })
+    }
+
+    if (promoCode.usedCount >= promoCode.maxUses) {
+      return res.status(400).json({
+        success: false,
+        message: 'Promokod limitga yetgan'
+      })
+    }
+
+    // Apply promocode
+    promoCode.usedCount++
+    promoCodes.set(promoCode.code, promoCode)
+
+    // Calculate expiration date
+    const expiresAt = new Date()
+    expiresAt.setMonth(expiresAt.getMonth() + promoCode.durationMonths)
+
+    res.json({
+      success: true,
+      message: 'Promokod muvaffaqiyatli faollashtirildi',
+      expiresAt: expiresAt.toISOString(),
+      durationMonths: promoCode.durationMonths
+    })
+  } catch (error) {
+    console.error('Error applying promocode:', error)
+    res.status(500).json({ success: false, message: 'Server xatosi' })
+  }
+})
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({

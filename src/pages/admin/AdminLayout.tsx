@@ -8,7 +8,8 @@ import {
   Settings,
   Database,
   LogOut,
-  Users
+  Users,
+  Tag
 } from 'lucide-react'
 
 const adminMenuItems = [
@@ -16,6 +17,7 @@ const adminMenuItems = [
   { icon: Users, label: 'Foydalanuvchilar', path: '/admin/users' },
   { icon: FileQuestion, label: 'Savollar', path: '/admin/questions' },
   { icon: BookOpen, label: 'Biletlar', path: '/admin/bilets' },
+  { icon: Tag, label: 'Promokodlar', path: '/admin/promocodes' },
   { icon: Database, label: 'Ma\'lumotlar', path: '/admin/data' },
   { icon: Settings, label: 'Sozlamalar', path: '/admin/settings' },
 ]
