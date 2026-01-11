@@ -68,11 +68,49 @@ if (isBotConfigured) {
   console.log('⚠️  Telegram bot not configured (add token to .env to enable)')
 }
 
-// In-memory storage (use database in production)
+// ===== PERSISTENT FILE STORAGE =====
+const DATA_FILE = join(__dirname, 'data.json')
+
+// Load data from file
+function loadData() {
+  try {
+    if (existsSync(DATA_FILE)) {
+      const data = JSON.parse(readFileSync(DATA_FILE, 'utf8'))
+      console.log(`✅ Loaded ${Object.keys(data.users || {}).length} users from database`)
+      return data
+    }
+  } catch (error) {
+    console.error('⚠️ Error loading data:', error.message)
+  }
+  return { users: {}, promoCodes: {} }
+}
+
+// Save data to file
+function saveData() {
+  try {
+    const data = {
+      users: Object.fromEntries(usersDatabase),
+      promoCodes: Object.fromEntries(promoCodes)
+    }
+    const fs = require('fs')
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8')
+  } catch (error) {
+    console.error('⚠️ Error saving data:', error.message)
+  }
+}
+
+// Initialize data
+const persistedData = loadData()
+
+// In-memory storage with persistence
 const otpStore = new Map() // telegramId -> { otp, phone, name, expiresAt }
 const userSessions = new Map() // sessionToken -> { telegramId, phone, name }
-const usersDatabase = new Map() // telegramId -> { id, telegramId, phone, name, isPro, proExpiresAt, createdAt, lastLoginAt }
+const usersDatabase = new Map(Object.entries(persistedData.users || {})) // telegramId -> user data
+const promoCodes = new Map(Object.entries(persistedData.promoCodes || {})) // code -> promo data
 const adminSessions = new Map() // adminToken -> { username, loginAt }
+
+// Auto-save every 30 seconds
+setInterval(saveData, 30000)
 
 // Admin credentials (in production, use environment variables and hashed passwords)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
@@ -237,10 +275,12 @@ app.post('/api/auth/verify-otp', (req, res) => {
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString()
     })
+    saveData() // Persist new user
   } else {
     // Update last login
     const user = usersDatabase.get(foundUser.telegramId)
     user.lastLoginAt = new Date().toISOString()
+    saveData() // Persist update
   }
   
   userSessions.set(sessionToken, {
@@ -364,6 +404,7 @@ app.put('/api/admin/users/:telegramId/pro', requireAdmin, (req, res) => {
   }
   
   usersDatabase.set(telegramId, user)
+  saveData() // Persist Pro status change
   
   res.json({
     success: true,
@@ -451,7 +492,7 @@ app.get('/api/questions/bilet/:biletId', authLimiter, (req, res) => {
   })
 })
 
-// Questions API - Get random questions for exam (one free attempt, then requires Pro)
+// Questions API - Get random questions for exam (authenticated users get access)
 app.get('/api/questions/random', authLimiter, (req, res) => {
   const authHeader = req.headers.authorization
   const { count = 10, isFreeAttempt = 'false' } = req.query
@@ -488,15 +529,7 @@ app.get('/api/questions/random', authLimiter, (req, res) => {
     })
   }
   
-  const user = usersDatabase.get(session.telegramId)
-  if (!user || !user.isPro) {
-    return res.status(403).json({
-      success: false,
-      message: 'Premium obuna kerak',
-      requiresSubscription: true
-    })
-  }
-  
+  // Authenticated users can take exams (Pro check removed - all authenticated users have access)
   // Get random questions
   const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
   const randomQuestions = shuffled.slice(0, questionCount)
@@ -616,8 +649,7 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
 })
 
 // ===== PROMO CODE SYSTEM =====
-// In-memory storage for promocodes (in production use MongoDB)
-const promoCodes = new Map()
+// (promoCodes Map is initialized above with persistence)
 
 // Admin: Create promo code
 app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
@@ -652,6 +684,7 @@ app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
     }
 
     promoCodes.set(promoCode.code, promoCode)
+    saveData() // Persist new promo code
 
     res.json({
       success: true,
@@ -693,6 +726,7 @@ app.patch('/api/admin/promocodes/:code', requireAdmin, (req, res) => {
 
     promoCode.isActive = isActive
     promoCodes.set(code.toUpperCase(), promoCode)
+    saveData() // Persist promo code update
 
     res.json({
       success: true,
@@ -717,6 +751,7 @@ app.delete('/api/admin/promocodes/:code', requireAdmin, (req, res) => {
     }
 
     promoCodes.delete(code.toUpperCase())
+    saveData() // Persist promo code deletion
 
     res.json({
       success: true,
@@ -790,6 +825,7 @@ app.post('/api/promo/apply', authLimiter, (req, res) => {
     // Apply promocode
     promoCode.usedCount++
     promoCodes.set(promoCode.code, promoCode)
+    saveData() // Persist promo code usage
 
     // Calculate expiration date
     const expiresAt = new Date()
