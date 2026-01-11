@@ -38,7 +38,7 @@ export const useExamStore = create<ExamState>()(
             // For bilet exams: fetch questions from API (requires auth for bilets > 5)
             questions = await fetchBiletQuestions(biletId)
           } else {
-            // For standard and real exams: fetch random questions (no auth needed)
+            // For standard and real exams: fetch random questions
             questions = await fetchRandomQuestions(questionCount)
           }
 

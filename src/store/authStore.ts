@@ -99,15 +99,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       canTakeExam: () => {
-        const { isAuthenticated, freeAttemptsUsed, user } = get()
+        const { freeAttemptsUsed, user } = get()
         
         // Premium users can always take exams
         if (user?.isPremium) return true
         
-        // Authenticated users get unlimited attempts
-        if (isAuthenticated) return true
-        
-        // Non-authenticated users get 1 free attempt
+        // Everyone else gets only 1 free attempt
         return freeAttemptsUsed < 1
       },
     }),
