@@ -4,6 +4,7 @@ import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import rateLimit from 'express-rate-limit'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -11,6 +12,23 @@ const __dirname = dirname(__filename)
 dotenv.config({ path: join(__dirname, '.env') })
 
 const app = express()
+
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: 'Juda ko\'p so\'rov yuborildi, iltimos keyinroq urinib ko\'ring'
+})
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // Limit auth attempts
+  message: 'Juda ko\'p autentifikatsiya urinishi, 15 daqiqa kuting'
+})
+
+app.use('/api/', apiLimiter)
+app.use('/api/auth/', authLimiter)
+
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -42,6 +60,36 @@ if (isBotConfigured) {
 const otpStore = new Map() // telegramId -> { otp, phone, name, expiresAt }
 const userSessions = new Map() // sessionToken -> { telegramId, phone, name }
 const usersDatabase = new Map() // telegramId -> { id, telegramId, phone, name, isPro, proExpiresAt, createdAt, lastLoginAt }
+const adminSessions = new Map() // adminToken -> { username, loginAt }
+
+// Admin credentials (in production, use environment variables and hashed passwords)
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+
+// Middleware to verify admin authentication
+function requireAdmin(req, res, next) {
+  const authHeader = req.headers.authorization
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'Admin autentifikatsiyasi talab qilinadi'
+    })
+  }
+  
+  const token = authHeader.substring(7)
+  const session = adminSessions.get(token)
+  
+  if (!session) {
+    return res.status(401).json({
+      success: false,
+      message: 'Yaroqsiz yoki muddati o\'tgan sessiya'
+    })
+  }
+  
+  req.admin = session
+  next()
+}
 
 // Generate 6-digit OTP
 function generateOTP() {
@@ -236,8 +284,44 @@ app.post('/api/auth/logout', (req, res) => {
   })
 })
 
-// Admin API - Get all users
-app.get('/api/admin/users', (req, res) => {
+// Admin login
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body
+  
+  if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({
+      success: false,
+      message: 'Noto\'g\'ri login yoki parol'
+    })
+  }
+  
+  const adminToken = `admin_${Date.now()}_${Math.random().toString(36).substr(2)}`
+  adminSessions.set(adminToken, {
+    username,
+    loginAt: new Date().toISOString()
+  })
+  
+  res.json({
+    success: true,
+    token: adminToken,
+    admin: { username }
+  })
+})
+
+// Admin logout
+app.post('/api/admin/logout', requireAdmin, (req, res) => {
+  const authHeader = req.headers.authorization
+  const token = authHeader.substring(7)
+  adminSessions.delete(token)
+  
+  res.json({
+    success: true,
+    message: 'Admin paneldan chiqdingiz'
+  })
+})
+
+// Admin API - Get all users (protected)
+app.get('/api/admin/users', requireAdmin, (req, res) => {
   const users = Array.from(usersDatabase.values())
   res.json({
     success: true,
@@ -245,8 +329,8 @@ app.get('/api/admin/users', (req, res) => {
   })
 })
 
-// Admin API - Update user Pro status
-app.put('/api/admin/users/:telegramId/pro', (req, res) => {
+// Admin API - Update user Pro status (protected)
+app.put('/api/admin/users/:telegramId/pro', requireAdmin, (req, res) => {
   const { telegramId } = req.params
   const { isPro, expirationDays } = req.body
   
@@ -272,6 +356,80 @@ app.put('/api/admin/users/:telegramId/pro', (req, res) => {
   res.json({
     success: true,
     user: user
+  })
+})
+
+// Questions API - Get questions by bilet (protected, requires auth)
+app.get('/api/questions/bilet/:biletId', authLimiter, (req, res) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'Avtorizatsiya talab qilinadi'
+    })
+  }
+  
+  const token = authHeader.substring(7)
+  const session = userSessions.get(token)
+  
+  if (!session) {
+    return res.status(401).json({
+      success: false,
+      message: 'Yaroqsiz sessiya. Iltimos, qaytadan kiring'
+    })
+  }
+  
+  const { biletId } = req.params
+  const biletNumber = parseInt(biletId)
+  
+  // Import questions dynamically (we'll add the data later)
+  // For now, send empty array
+  // TODO: Add questions database
+  
+  res.json({
+    success: true,
+    biletId: biletNumber,
+    questions: [] // Will be populated with real questions
+  })
+})
+
+// Questions API - Get random questions for exam (protected, requires Pro)
+app.get('/api/questions/random', authLimiter, (req, res) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'Avtorizatsiya talab qilinadi'
+    })
+  }
+  
+  const token = authHeader.substring(7)
+  const session = userSessions.get(token)
+  
+  if (!session) {
+    return res.status(401).json({
+      success: false,
+      message: 'Yaroqsiz sessiya. Iltimos, qaytadan kiring'
+    })
+  }
+  
+  const user = usersDatabase.get(session.telegramId)
+  if (!user || !user.isPro) {
+    return res.status(403).json({
+      success: false,
+      message: 'Ushbu xizmat faqat Pro foydalanuvchilar uchun'
+    })
+  }
+  
+  const { count = 10 } = req.query
+  const questionCount = parseInt(count)
+  
+  // TODO: Add random question selection from database
+  
+  res.json({
+    success: true,
+    count: questionCount,
+    questions: [] // Will be populated with random questions
   })
 })
 
