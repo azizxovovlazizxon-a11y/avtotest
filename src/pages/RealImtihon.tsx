@@ -3,9 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { HelpCircle, Clock, Target, CheckCircle, Info, Play, Lock } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useExamStore } from '../store/examStore'
+import Modal from '../components/Modal'
 
 export default function RealImtihon() {
   const [loading, setLoading] = useState(false)
+  const [modal, setModal] = useState<{
+    isOpen: boolean
+    message: string
+    type: 'info' | 'warning' | 'error' | 'success'
+  }>({ isOpen: false, message: '', type: 'info' })
   const navigate = useNavigate()
   const { user, canTakeExam, incrementFreeAttempt, isAuthenticated } = useAuthStore()
   const { startExam } = useExamStore()
@@ -14,8 +20,11 @@ export default function RealImtihon() {
 
   const handleStartExam = async () => {
     if (!canStartExam) {
-      alert('Bepul urinish tugadi! Premium obuna sotib oling.')
-      navigate('/pro-versiya')
+      setModal({
+        isOpen: true,
+        message: 'Bepul urinish tugadi! Premium obuna sotib oling.',
+        type: 'warning'
+      })
       return
     }
 
@@ -30,9 +39,22 @@ export default function RealImtihon() {
 
       navigate('/exam/real')
     } catch (error) {
-      alert('Imtihonni boshlashda xatolik: ' + (error as Error).message)
+      setModal({
+        isOpen: true,
+        message: (error as Error).message,
+        type: 'error'
+      })
       setLoading(false)
     }
+  }
+
+  const handleModalClose = () => {
+    setModal({ ...modal, isOpen: false })
+  }
+
+  const handleGoToPro = () => {
+    setModal({ ...modal, isOpen: false })
+    navigate('/pro-versiya')
   }
 
   return (
@@ -162,6 +184,17 @@ export default function RealImtihon() {
           </button>
         </div>
       </div>
+
+      {/* Modal */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={handleModalClose}
+        title="Diqqat!"
+        message={modal.message}
+        type={modal.type}
+        buttonText={modal.type === 'warning' ? "Pro versiyaga o'tish" : "Yopish"}
+        onButtonClick={modal.type === 'warning' ? handleGoToPro : handleModalClose}
+      />
     </div>
   )
 }
