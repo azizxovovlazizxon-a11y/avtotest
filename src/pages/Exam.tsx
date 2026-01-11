@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useExamStore } from '../store/examStore'
 import { YandexAdPlaceholder } from '../components/YandexAd'
+import { fetchImageWithAuth } from '../services/api'
 
 export default function Exam() {
   const { examType } = useParams<{ examType: string }>()
@@ -33,6 +34,7 @@ export default function Exam() {
     correctAnswer: number
   } | null>(null)
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
+  const [imageCache, setImageCache] = useState<Map<string, string>>(new Map())
   const autoAdvanceTimer = useRef<number | null>(null)
 
   // Initialize timer for real exam
@@ -87,6 +89,25 @@ export default function Exam() {
   const currentQuestion = questions[currentQuestionIndex]
   const selectedAnswer = answers.get(currentQuestion.id)
   const isRealExam = examType === 'real'
+
+  // Load image with authentication when question changes
+  useEffect(() => {
+    if (currentQuestion.imageUrl && !imageCache.has(currentQuestion.imageUrl)) {
+      fetchImageWithAuth(currentQuestion.imageUrl)
+        .then(blobUrl => {
+          setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, blobUrl))
+        })
+        .catch(err => {
+          console.error('Failed to load image:', err)
+        })
+    }
+  }, [currentQuestion.imageUrl, imageCache])
+
+  // Get cached image URL or original
+  const getImageSrc = (imageUrl: string | undefined) => {
+    if (!imageUrl) return ''
+    return imageCache.get(imageUrl) || imageUrl
+  }
 
   // Restore or clear feedback when question changes
   useEffect(() => {
@@ -301,10 +322,10 @@ export default function Exam() {
           {currentQuestion.imageUrl && (
             <div className="mb-6 bg-slate-100 rounded-xl p-6 flex items-center justify-center">
               <img 
-                src={currentQuestion.imageUrl} 
+                src={getImageSrc(currentQuestion.imageUrl)} 
                 alt="Savol rasmi"
                 className="max-w-full max-h-96 rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setFullscreenImage(currentQuestion.imageUrl!)}
+                onClick={() => setFullscreenImage(getImageSrc(currentQuestion.imageUrl!))}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';

@@ -8,6 +8,45 @@ const getAuthToken = (): string | null => {
   return localStorage.getItem('authToken')
 }
 
+// Get image URL with authentication
+export const getImageUrl = (imageUrl: string): string => {
+  // Extract filename from path like "/images/questions/i1_1.webp"
+  const filename = imageUrl.split('/').pop()
+  if (!filename) return imageUrl
+  
+  const token = getAuthToken()
+  if (!token) return imageUrl
+  
+  // Return authenticated image URL
+  return `${API_URL}/api/images/${filename}`
+}
+
+// Fetch image with authentication (returns blob URL)
+export const fetchImageWithAuth = async (imageUrl: string): Promise<string> => {
+  const token = getAuthToken()
+  if (!token) {
+    throw new Error('Avtorizatsiya talab qilinadi')
+  }
+  
+  const filename = imageUrl.split('/').pop()
+  if (!filename) {
+    throw new Error('Noto\'g\'ri rasm URL')
+  }
+  
+  const response = await fetch(`${API_URL}/api/images/${filename}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Rasmni yuklashda xatolik')
+  }
+  
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
+}
+
 // Get bilet information
 export const fetchBiletInfo = async () => {
   const token = getAuthToken()

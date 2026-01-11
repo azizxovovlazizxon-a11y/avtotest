@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: avtotest-backend
+    env: node
+    buildCommand: npm install && npm rebuild sharp
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: PORT
+        value: 5000
