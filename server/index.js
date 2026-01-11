@@ -543,20 +543,21 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
     const metadata = await sharp(imageBuffer).metadata()
     console.log(`📐 Image dimensions: ${metadata.width}x${metadata.height}`)
     
-    // Create VERY VISIBLE watermark - RED color, larger font
-    const fontSize = Math.max(48, Math.floor(metadata.width / 15))
-    const yPosition = Math.floor(metadata.height * 0.92)
+    // Create subtle watermark - white color, smaller font, left bottom
+    const fontSize = Math.max(16, Math.floor(metadata.width / 40))
+    const yPosition = Math.floor(metadata.height * 0.97)
+    const xPosition = Math.floor(metadata.width * 0.15)
     
-    console.log(`✏️ Watermark: fontSize=${fontSize}, yPosition=${yPosition}`)
+    console.log(`✏️ Watermark: fontSize=${fontSize}, position=(${xPosition}, ${yPosition})`)
     
     const watermarkSvg = `
       <svg width="${metadata.width}" height="${metadata.height}">
         <defs>
           <filter id="shadow" x="-100%" y="-100%" width="300%" height="300%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
-            <feOffset dx="3" dy="3" result="offsetblur"/>
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+            <feOffset dx="1" dy="1" result="offsetblur"/>
             <feComponentTransfer>
-              <feFuncA type="linear" slope="0.8"/>
+              <feFuncA type="linear" slope="0.5"/>
             </feComponentTransfer>
             <feMerge>
               <feMergeNode/>
@@ -565,15 +566,15 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
           </filter>
         </defs>
         <text
-          x="50%"
+          x="${xPosition}"
           y="${yPosition}"
           font-family="Arial, sans-serif"
           font-size="${fontSize}"
-          font-weight="bold"
-          fill="#FF0000"
-          text-anchor="middle"
+          font-weight="normal"
+          fill="white"
+          text-anchor="start"
           filter="url(#shadow)"
-          opacity="1"
+          opacity="0.5"
         >yo'lqoidasi.uz</text>
       </svg>
     `
