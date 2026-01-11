@@ -4,8 +4,9 @@ import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import rateLimit from 'express-rate-limit'
+import sharp from 'sharp'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -490,6 +491,79 @@ app.get('/api/questions/random', authLimiter, (req, res) => {
     count: questionCount,
     questions: randomQuestions
   })
+})
+
+// Image serving with watermark (requires auth)
+app.get('/api/images/:filename', authLimiter, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Avtorizatsiya talab qilinadi'
+      })
+    }
+    
+    const token = authHeader.substring(7)
+    const session = userSessions.get(token)
+    
+    if (!session) {
+      return res.status(401).json({
+        success: false,
+        message: 'Yaroqsiz sessiya'
+      })
+    }
+    
+    const { filename } = req.params
+    
+    // Security: only allow webp files from questions directory
+    if (!filename.match(/^i\d+_\d+\.webp$/)) {
+      return res.status(400).send('Invalid filename')
+    }
+    
+    const imagePath = join(__dirname, '..', 'public', 'images', 'questions', filename)
+    
+    if (!existsSync(imagePath)) {
+      return res.status(404).send('Image not found')
+    }
+    
+    // Read the original image
+    const imageBuffer = readFileSync(imagePath)
+    
+    // Get image metadata
+    const metadata = await sharp(imageBuffer).metadata()
+    
+    // Create watermark text overlay
+    const watermarkSvg = `
+      <svg width="${metadata.width}" height="${metadata.height}">
+        <style>
+          .watermark { 
+            fill: rgba(255, 255, 255, 0.5); 
+            font-size: ${Math.max(20, Math.floor(metadata.width / 20))}px; 
+            font-family: Arial, sans-serif; 
+            font-weight: bold;
+          }
+        </style>
+        <text x="50%" y="95%" text-anchor="middle" class="watermark">yo'lqoidasi.uz</text>
+      </svg>
+    `
+    
+    // Apply watermark
+    const watermarkedImage = await sharp(imageBuffer)
+      .composite([{
+        input: Buffer.from(watermarkSvg),
+        gravity: 'southeast'
+      }])
+      .webp()
+      .toBuffer()
+    
+    res.set('Content-Type', 'image/webp')
+    res.set('Cache-Control', 'public, max-age=86400') // Cache for 1 day
+    res.send(watermarkedImage)
+  } catch (error) {
+    console.error('Error serving watermarked image:', error)
+    res.status(500).send('Error processing image')
+  }
 })
 
 // Health check
