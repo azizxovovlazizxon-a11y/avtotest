@@ -451,9 +451,26 @@ app.get('/api/questions/bilet/:biletId', authLimiter, (req, res) => {
   })
 })
 
-// Questions API - Get random questions for exam (protected, requires Pro)
+// Questions API - Get random questions for exam (one free attempt, then requires Pro)
 app.get('/api/questions/random', authLimiter, (req, res) => {
   const authHeader = req.headers.authorization
+  const { count = 10, isFreeAttempt = 'false' } = req.query
+  const questionCount = parseInt(count)
+  
+  // Allow one free attempt without authentication
+  if (isFreeAttempt === 'true') {
+    // Get random questions for free attempt
+    const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
+    const randomQuestions = shuffled.slice(0, questionCount)
+    
+    return res.json({
+      success: true,
+      count: questionCount,
+      questions: randomQuestions
+    })
+  }
+  
+  // For subsequent attempts, require authentication
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
       success: false,
@@ -475,12 +492,10 @@ app.get('/api/questions/random', authLimiter, (req, res) => {
   if (!user || !user.isPro) {
     return res.status(403).json({
       success: false,
-      message: 'Ushbu xizmat faqat Pro foydalanuvchilar uchun'
+      message: 'Premium obuna kerak',
+      requiresSubscription: true
     })
   }
-  
-  const { count = 10 } = req.query
-  const questionCount = parseInt(count)
   
   // Get random questions
   const shuffled = [...questionsData].sort(() => Math.random() - 0.5)

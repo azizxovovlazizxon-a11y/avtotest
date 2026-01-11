@@ -38,8 +38,12 @@ export const useExamStore = create<ExamState>()(
             // For bilet exams: fetch questions from API
             questions = await fetchBiletQuestions(biletId)
           } else {
-            // For standard and real exams: fetch random questions
-            questions = await fetchRandomQuestions(questionCount)
+            // For standard and real exams: check if it's a free attempt
+            const token = localStorage.getItem('authToken')
+            const isFreeAttempt = !token
+            
+            // Fetch random questions (free attempt or authenticated)
+            questions = await fetchRandomQuestions(questionCount, isFreeAttempt)
           }
 
           const session: ExamSession = {

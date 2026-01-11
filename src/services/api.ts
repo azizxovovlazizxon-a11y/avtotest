@@ -94,9 +94,23 @@ export const fetchBiletQuestions = async (biletId: number): Promise<Question[]> 
   return data.questions
 }
 
-// Get random questions for exam (Pro only)
-export const fetchRandomQuestions = async (count: number): Promise<Question[]> => {
+// Get random questions for exam (Pro only, or one free attempt)
+export const fetchRandomQuestions = async (count: number, isFreeAttempt: boolean = false): Promise<Question[]> => {
   const token = getAuthToken()
+  
+  // If it's a free attempt, don't require token
+  if (isFreeAttempt) {
+    const response = await fetch(`${API_URL}/api/questions/random?count=${count}&isFreeAttempt=true`)
+    
+    if (!response.ok) {
+      throw new Error('Savollarni yuklashda xatolik')
+    }
+    
+    const data = await response.json()
+    return data.questions
+  }
+  
+  // For authenticated requests
   if (!token) {
     throw new Error('Avtorizatsiya talab qilinadi')
   }
@@ -110,6 +124,9 @@ export const fetchRandomQuestions = async (count: number): Promise<Question[]> =
   if (!response.ok) {
     try {
       const data = await response.json()
+      if (data.requiresSubscription) {
+        throw new Error('Premium obuna kerak. Pro versiyaga o\'ting!')
+      }
       throw new Error(data.message || 'Savollarni yuklashda xatolik')
     } catch (e) {
       throw new Error('Savollarni yuklashda xatolik')

@@ -16,8 +16,10 @@ export default function RealImtihon() {
     if (!canStartExam) {
       // Redirect to Pro version or auth page
       if (!isAuthenticated) {
-        navigate('/auth', { state: { from: { pathname: '/real-imtihon' } } })
+        alert('Sizda bepul urinish tugadi. Pro versiyaga o\'ting yoki Telegram orqali kiring!')
+        navigate('/pro-versiya')
       } else {
+        alert('Premium obuna kerak. Pro versiyaga o\'ting!')
         navigate('/pro-versiya')
       }
       return
@@ -28,13 +30,19 @@ export default function RealImtihon() {
       await startExam('real', 20)
       
       // Track free attempt usage if not authenticated or not premium
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !user?.isPremium) {
         incrementFreeAttempt()
       }
 
       navigate('/exam/real')
     } catch (error) {
-      alert('Imtihonni boshlashda xatolik: ' + (error as Error).message)
+      const errorMessage = (error as Error).message
+      if (errorMessage.includes('Premium obuna')) {
+        alert('Premium obuna kerak. Pro versiyaga o\'ting!')
+        navigate('/pro-versiya')
+      } else {
+        alert('Imtihonni boshlashda xatolik: ' + errorMessage)
+      }
       setLoading(false)
     }
   }
