@@ -20,7 +20,8 @@ export default function StandartImtihon() {
   const canStartExam = canTakeExam()
 
   const handleStartExam = async () => {
-    if (!canStartExam) {
+    // Check if user can take exam (1 free attempt or Premium)
+    if (!canStartExam && !user?.isPremium) {
       setModal({
         isOpen: true,
         message: 'Bepul urinish tugadi! Premium obuna sotib oling.',
