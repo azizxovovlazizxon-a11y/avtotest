@@ -6,12 +6,14 @@ import {
   ArrowLeft,
   Settings,
   Database,
-  LogOut
+  LogOut,
+  Users
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 
 const adminMenuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+  { icon: Users, label: 'Foydalanuvchilar', path: '/admin/users' },
   { icon: FileQuestion, label: 'Savollar', path: '/admin/questions' },
   { icon: BookOpen, label: 'Biletlar', path: '/admin/bilets' },
   { icon: Database, label: 'Ma\'lumotlar', path: '/admin/data' },

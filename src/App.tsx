@@ -19,6 +19,7 @@ import About from './pages/About'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminUsers from './pages/admin/AdminUsers'
 import AdminQuestions from './pages/admin/AdminQuestions'
 import AdminBilets from './pages/admin/AdminBilets'
 import AdminData from './pages/admin/AdminData'
@@ -64,6 +65,7 @@ function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
           <Route path="questions" element={<AdminQuestions />} />
           <Route path="bilets" element={<AdminBilets />} />
           <Route path="data" element={<AdminData />} />
