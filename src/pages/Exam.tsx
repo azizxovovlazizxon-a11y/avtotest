@@ -94,18 +94,24 @@ export default function Exam() {
   // Load image with authentication when question changes
   useEffect(() => {
     if (currentQuestion.imageUrl && !imageCache.has(currentQuestion.imageUrl)) {
+      console.log('🖼️ Loading image:', currentQuestion.imageUrl)
+      console.log('🔑 Auth token:', localStorage.getItem('authToken') ? 'EXISTS' : 'MISSING')
+      
       setImageLoading(true)
       fetchImageWithAuth(currentQuestion.imageUrl)
         .then(blobUrl => {
+          console.log('✅ Watermarked image loaded:', blobUrl)
           setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, blobUrl))
           setImageLoading(false)
         })
         .catch(err => {
-          console.error('Failed to load watermarked image:', err)
+          console.error('❌ Failed to load watermarked image:', err)
           // Fallback to original image if watermarking fails
           setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, currentQuestion.imageUrl!))
           setImageLoading(false)
         })
+    } else if (currentQuestion.imageUrl) {
+      console.log('📦 Using cached image for:', currentQuestion.imageUrl)
     }
   }, [currentQuestion.imageUrl, imageCache])
 

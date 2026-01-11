@@ -496,8 +496,12 @@ app.get('/api/questions/random', authLimiter, (req, res) => {
 // Image serving with watermark (requires auth)
 app.get('/api/images/:filename', authLimiter, async (req, res) => {
   try {
+    console.log('🖼️ Watermark request for:', req.params.filename)
+    console.log('🔑 Authorization header:', req.headers.authorization ? 'EXISTS' : 'MISSING')
+    
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ No auth header')
       return res.status(401).json({
         success: false,
         message: 'Avtorizatsiya talab qilinadi'
@@ -508,22 +512,27 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
     const session = userSessions.get(token)
     
     if (!session) {
+      console.log('❌ Invalid session')
       return res.status(401).json({
         success: false,
         message: 'Yaroqsiz sessiya'
       })
     }
     
+    console.log('✅ Session valid for phone:', session.phoneNumber)
+    
     const { filename } = req.params
     
     // Security: only allow webp files from questions directory
     if (!filename.match(/^i\d+_\d+\.webp$/)) {
+      console.log('❌ Invalid filename format')
       return res.status(400).send('Invalid filename')
     }
     
     const imagePath = join(__dirname, '..', 'public', 'images', 'questions', filename)
     
     if (!existsSync(imagePath)) {
+      console.log('❌ Image not found:', imagePath)
       return res.status(404).send('Image not found')
     }
     
@@ -532,26 +541,40 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
     
     // Get image metadata
     const metadata = await sharp(imageBuffer).metadata()
+    console.log(`📐 Image dimensions: ${metadata.width}x${metadata.height}`)
     
-    // Create watermark text overlay with better visibility
-    const fontSize = Math.max(24, Math.floor(metadata.width / 25))
+    // Create VERY VISIBLE watermark - RED color, larger font
+    const fontSize = Math.max(48, Math.floor(metadata.width / 15))
+    const yPosition = Math.floor(metadata.height * 0.92)
+    
+    console.log(`✏️ Watermark: fontSize=${fontSize}, yPosition=${yPosition}`)
+    
     const watermarkSvg = `
       <svg width="${metadata.width}" height="${metadata.height}">
         <defs>
-          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="black" flood-opacity="0.8"/>
+          <filter id="shadow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+            <feOffset dx="3" dy="3" result="offsetblur"/>
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.8"/>
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
           </filter>
         </defs>
-        <style>
-          .watermark { 
-            fill: rgba(255, 255, 255, 0.9); 
-            font-size: ${fontSize}px; 
-            font-family: Arial, sans-serif; 
-            font-weight: bold;
-            filter: url(#shadow);
-          }
-        </style>
-        <text x="50%" y="96%" text-anchor="middle" class="watermark">yo'lqoidasi.uz</text>
+        <text
+          x="50%"
+          y="${yPosition}"
+          font-family="Arial, sans-serif"
+          font-size="${fontSize}"
+          font-weight="bold"
+          fill="#FF0000"
+          text-anchor="middle"
+          filter="url(#shadow)"
+          opacity="1"
+        >yo'lqoidasi.uz</text>
       </svg>
     `
     
@@ -559,16 +582,19 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
     const watermarkedImage = await sharp(imageBuffer)
       .composite([{
         input: Buffer.from(watermarkSvg),
-        gravity: 'south'
+        top: 0,
+        left: 0
       }])
-      .webp()
+      .webp({ quality: 90 })
       .toBuffer()
     
+    console.log('✅ Watermark applied, sending image')
+    
     res.set('Content-Type', 'image/webp')
-    res.set('Cache-Control', 'public, max-age=86400') // Cache for 1 day
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate') // No cache for testing
     res.send(watermarkedImage)
   } catch (error) {
-    console.error('Error serving watermarked image:', error)
+    console.error('❌ Error serving watermarked image:', error)
     res.status(500).send('Error processing image')
   }
 })
