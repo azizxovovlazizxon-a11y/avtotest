@@ -82,8 +82,12 @@ export const fetchBiletQuestions = async (biletId: number): Promise<Question[]> 
   })
 
   if (!response.ok) {
-    const data = await response.json()
-    throw new Error(data.message || 'Savollarni yuklashda xatolik')
+    try {
+      const data = await response.json()
+      throw new Error(data.message || 'Savollarni yuklashda xatolik')
+    } catch (e) {
+      throw new Error('Savollarni yuklashda xatolik')
+    }
   }
 
   const data = await response.json()
@@ -104,8 +108,12 @@ export const fetchRandomQuestions = async (count: number): Promise<Question[]> =
   })
 
   if (!response.ok) {
-    const data = await response.json()
-    throw new Error(data.message || 'Savollarni yuklashda xatolik')
+    try {
+      const data = await response.json()
+      throw new Error(data.message || 'Savollarni yuklashda xatolik')
+    } catch (e) {
+      throw new Error('Savollarni yuklashda xatolik')
+    }
   }
 
   const data = await response.json()
