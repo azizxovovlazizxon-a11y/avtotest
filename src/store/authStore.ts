@@ -46,6 +46,9 @@ export const useAuthStore = create<AuthState>()(
               createdAt: new Date().toISOString(),
             }
             
+            // Save token to localStorage for API requests
+            localStorage.setItem('authToken', token)
+            
             set({ 
               user, 
               token, 
@@ -63,6 +66,8 @@ export const useAuthStore = create<AuthState>()(
         if (token) {
           axios.post(`${API_URL}/auth/logout`, { token }).catch(() => {})
         }
+        // Remove token from localStorage
+        localStorage.removeItem('authToken')
         set({ user: null, token: null, isAuthenticated: false })
       },
 
