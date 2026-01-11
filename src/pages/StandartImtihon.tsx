@@ -201,7 +201,6 @@ export default function StandartImtihon() {
               </>
             )}
           </button>
-          </button>
         </div>
       </div>
     </div>
