@@ -85,7 +85,7 @@ export default function ProVersiya() {
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoError, setPromoError] = useState('')
 
-  const handleSubscribe = (planId: string) => {
+  const handleSubscribe = (_planId: string) => {
     // TODO: Integrate with payment gateway (Payme, Click, Uzum)
     alert('To\'lov tizimi integratsiyasi hali qo\'shilmagan')
   }
