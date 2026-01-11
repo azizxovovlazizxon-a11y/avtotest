@@ -76,25 +76,11 @@ const plans = [
 ]
 
 export default function ProVersiya() {
-  const { user, updateUser } = useAuthStore()
+  const { user } = useAuthStore()
 
   const handleSubscribe = (planId: string) => {
-    // In production, this would integrate with payment gateway (Payme, Click, Uzum)
-    // For demo, we'll just activate premium
-    const plan = plans.find(p => p.id === planId)
-    if (plan) {
-      const expiresAt = new Date()
-      expiresAt.setMonth(expiresAt.getMonth() + plan.duration)
-      
-      updateUser({
-        isPremium: true,
-        premiumExpiresAt: expiresAt.toISOString(),
-        freeStandardAttempts: 999,
-        freeRealAttempts: 999,
-      })
-      
-      alert('Premium faollashtirildi! (Demo rejimda)')
-    }
+    // TODO: Integrate with payment gateway (Payme, Click, Uzum)
+    alert('To\'lov tizimi integratsiyasi hali qo\'shilmagan')
   }
 
   return (
@@ -186,12 +172,11 @@ export default function ProVersiya() {
 
               <button
                 onClick={() => handleSubscribe(plan.id)}
-                disabled={user?.isPremium}
                 className={`w-full py-3 rounded-xl font-medium transition-all ${
                   plan.isPopular
                     ? 'bg-amber-500 hover:bg-amber-600 text-white'
                     : 'bg-white border-2 border-amber-500 text-amber-600 hover:bg-amber-50'
-                } ${user?.isPremium ? 'opacity-50 cursor-not-allowed' : ''}`}
+                }`}
               >
                 Tanlash
               </button>
