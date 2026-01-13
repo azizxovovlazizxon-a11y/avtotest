@@ -34,7 +34,7 @@ const apiLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, // Limit auth attempts
+  max: 30, // Limit auth attempts - increased to allow normal usage
   message: 'Juda ko\'p autentifikatsiya urinishi, 15 daqiqa kuting'
 })
 
@@ -423,7 +423,7 @@ app.put('/api/admin/users/:telegramId/pro', requireAdmin, (req, res) => {
 })
 
 // Questions API - Get bilet info (requires auth)
-app.get('/api/questions/bilets', authLimiter, (req, res) => {
+app.get('/api/questions/bilets', (req, res) => {
   const authHeader = req.headers.authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
@@ -461,7 +461,7 @@ app.get('/api/questions/bilets', authLimiter, (req, res) => {
 })
 
 // Questions API - Get questions by bilet (protected, requires auth)
-app.get('/api/questions/bilet/:biletId', authLimiter, (req, res) => {
+app.get('/api/questions/bilet/:biletId', (req, res) => {
   const authHeader = req.headers.authorization
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
