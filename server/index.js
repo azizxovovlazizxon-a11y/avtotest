@@ -112,9 +112,9 @@ const adminSessions = new Map() // adminToken -> { username, loginAt }
 // Auto-save every 30 seconds
 setInterval(saveData, 30000)
 
-// Admin credentials (in production, use environment variables and hashed passwords)
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+// Admin credentials - hardcoded for simplicity
+const ADMIN_USERNAME = 'admin'
+const ADMIN_PASSWORD = 'admin123'
 
 // Middleware to verify admin authentication
 function requireAdmin(req, res, next) {
