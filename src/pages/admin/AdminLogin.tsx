@@ -15,46 +15,21 @@ export default function AdminLogin() {
     setError('')
     setLoading(true)
 
-    // Client-side validation first (works as fallback)
-    if (username === 'admin' && password === 'admin123') {
+    // Simple client-side validation - no server needed
+    const trimmedUsername = username.trim().toLowerCase()
+    const trimmedPassword = password.trim()
+    
+    if (trimmedUsername === 'admin' && trimmedPassword === 'admin123') {
       const clientToken = `admin_client_${Date.now()}_${Math.random().toString(36).substr(2)}`
       localStorage.setItem('adminToken', clientToken)
-      localStorage.setItem('adminUsername', username)
+      localStorage.setItem('adminUsername', 'admin')
       navigate('/admin')
       return
     }
 
-    try {
-      const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        localStorage.setItem('adminToken', data.token)
-        localStorage.setItem('adminUsername', data.admin.username)
-        navigate('/admin')
-      } else {
-        setError(data.message || 'Noto\'g\'ri login yoki parol')
-      }
-    } catch (err) {
-      // If server fails but credentials are correct, use client-side auth
-      if (username === 'admin' && password === 'admin123') {
-        const clientToken = `admin_client_${Date.now()}_${Math.random().toString(36).substr(2)}`
-        localStorage.setItem('adminToken', clientToken)
-        localStorage.setItem('adminUsername', username)
-        navigate('/admin')
-      } else {
-        setError('Noto\'g\'ri login yoki parol')
-      }
-    } finally {
-      setLoading(false)
-    }
+    // Wrong credentials
+    setError('Noto\'g\'ri login yoki parol')
+    setLoading(false)
   }
 
   return (
