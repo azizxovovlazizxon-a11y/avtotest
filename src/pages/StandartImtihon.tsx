@@ -205,7 +205,7 @@ export default function StandartImtihon() {
           {/* Start button */}
           <button
             onClick={handleStartExam}
-            disabled={(!canStartExam && !user?.isPremium) || loading}
+            disabled={loading}
             className="w-full btn-primary py-4 text-lg"
           >
             {loading ? (
