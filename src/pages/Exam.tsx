@@ -99,7 +99,8 @@ export default function Exam() {
       // If no auth token, use original image path directly (no watermark)
       if (!authToken) {
         console.log('⚠️ No auth token, using original image')
-        setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, currentQuestion.imageUrl!))\n        return
+        setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, currentQuestion.imageUrl!))
+        return
       }
       
       console.log('🖼️ Loading image:', currentQuestion.imageUrl)
