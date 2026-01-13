@@ -32,7 +32,12 @@ export const useAuthStore = create<AuthState>()(
 
       verifyOTP: async (otp: string) => {
         try {
-          const response = await axios.post(`${API_URL}/api/auth/verify-otp`, { otp })
+          const response = await axios.post(`${API_URL}/api/auth/verify-otp`, { otp }, {
+            timeout: 15000, // 15 second timeout for slow mobile connections
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
           
           if (response.data.success) {
             const { token, user: userData } = response.data
@@ -57,9 +62,21 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               freeAttemptsUsed: userData.isPro ? 0 : get().freeAttemptsUsed
             })
+          } else {
+            throw new Error(response.data.message || 'Xatolik yuz berdi')
           }
         } catch (error: any) {
-          throw new Error(error.response?.data?.message || 'Xatolik yuz berdi')
+          // Handle different error types
+          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            throw new Error('Internet aloqasi sekin. Qaytadan urinib ko\'ring.')
+          }
+          if (error.code === 'ERR_NETWORK' || !navigator.onLine) {
+            throw new Error('Internet aloqasi yo\'q. Internetni tekshiring.')
+          }
+          if (error.response?.data?.message) {
+            throw new Error(error.response.data.message)
+          }
+          throw new Error(error.message || 'Xatolik yuz berdi')
         }
       },
 

@@ -43,10 +43,27 @@ app.use('/api/', apiLimiter)
 app.use('/api/auth/', authLimiter)
 
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://avtotest-pearl.vercel.app'
-  ],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true)
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://avtotest-pearl.vercel.app'
+    ]
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+    
+    // Allow all vercel preview deployments
+    if (origin.includes('vercel.app')) {
+      return callback(null, true)
+    }
+    
+    return callback(null, true) // Allow all origins for now to debug mobile issue
+  },
   credentials: true
 }))
 app.use(express.json())
