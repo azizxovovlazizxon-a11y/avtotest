@@ -94,6 +94,7 @@ function saveData() {
     }
     const fs = require('fs')
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8')
+    console.log(`💾 Saved ${usersDatabase.size} users to database`)
   } catch (error) {
     console.error('⚠️ Error saving data:', error.message)
   }
