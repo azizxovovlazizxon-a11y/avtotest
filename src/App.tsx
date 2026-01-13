@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from './store/authStore'
 import Layout from './components/Layout'
 import TelegramAuth from './pages/TelegramAuth'
 import BoshSahifa from './pages/BoshSahifa'
