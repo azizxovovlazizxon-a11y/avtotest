@@ -15,22 +15,32 @@ export default function AdminLogin() {
     setError('')
     setLoading(true)
 
-    // Simple client-side validation - no server needed
-    const trimmedUsername = username.trim().toLowerCase()
-    const trimmedPassword = password.trim()
-    
-    if (trimmedUsername === 'admin' && trimmedPassword === 'admin123') {
-      const clientToken = `admin_client_${Date.now()}_${Math.random().toString(36).substr(2)}`
-      localStorage.setItem('adminToken', clientToken)
-      localStorage.setItem('adminUsername', 'admin')
-      // Use window.location to force full page reload
-      window.location.href = '/admin'
-      return
-    }
+    try {
+      const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username: username.trim(), 
+          password: password.trim() 
+        })
+      })
 
-    // Wrong credentials
-    setError('Noto\'g\'ri login yoki parol')
-    setLoading(false)
+      const data = await response.json()
+
+      if (data.success) {
+        localStorage.setItem('adminToken', data.token)
+        localStorage.setItem('adminUsername', data.admin.username)
+        window.location.href = '/admin'
+      } else {
+        setError(data.message || 'Noto\'g\'ri login yoki parol')
+      }
+    } catch (err) {
+      setError('Server bilan bog\'lanishda xatolik')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -108,13 +118,6 @@ export default function AdminLogin() {
             >
               {loading ? 'Tekshirilmoqda...' : 'Kirish'}
             </button>
-
-            {/* Info */}
-            <div className="text-center">
-              <p className="text-xs text-slate-400">
-                Default: login - <span className="text-teal-400 font-mono">admin</span>, parol - <span className="text-teal-400 font-mono">admin123</span>
-              </p>
-            </div>
           </form>
         </div>
 
