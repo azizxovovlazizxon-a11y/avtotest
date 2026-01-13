@@ -18,7 +18,7 @@ const menuItems = [
   { icon: Home, label: 'Bosh Sahifa', path: '/' },
   { icon: FileText, label: 'Standart Imtihon', path: '/standart-imtihon' },
   { icon: Target, label: 'Real Imtihon', path: '/real-imtihon' },
-  { icon: BookOpen, label: 'Biletlar', path: '/biletlar', badge: 40 },
+  { icon: BookOpen, label: 'Biletlar', path: '/biletlar', badge: 111 },
   { icon: BarChart3, label: 'Tarix va Statistika', path: '/tarix-statistika' },
 ]
 
