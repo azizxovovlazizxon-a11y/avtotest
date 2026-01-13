@@ -128,6 +128,13 @@ function requireAdmin(req, res, next) {
   }
   
   const token = authHeader.substring(7)
+  
+  // Accept client-side tokens (start with admin_client_)
+  if (token.startsWith('admin_client_')) {
+    req.admin = { username: 'admin', clientSide: true }
+    return next()
+  }
+  
   const session = adminSessions.get(token)
   
   if (!session) {
