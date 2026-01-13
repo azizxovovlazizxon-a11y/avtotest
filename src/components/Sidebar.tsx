@@ -26,6 +26,11 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
   const { logout, user, isAuthenticated } = useAuthStore()
+  
+  // Check if user has active premium
+  const isPremiumActive = user?.isPremium && (
+    !user?.proExpiresAt || new Date(user.proExpiresAt) > new Date()
+  )
 
   const handleLogout = () => {
     logout()
@@ -105,16 +110,23 @@ export default function Sidebar() {
 
           {/* Pro version button */}
           <div className="px-3 mb-4">
-            <button
-              onClick={() => {
-                navigate('/pro-versiya')
-                setIsOpen(false)
-              }}
-              className="w-full flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200"
-            >
-              <Crown size={20} />
-              Pro versiyaga o'tish
-            </button>
+            {isPremiumActive ? (
+              <div className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold py-3 px-4 rounded-xl">
+                <Crown size={20} />
+                <span>Pro Faol</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  navigate('/pro-versiya')
+                  setIsOpen(false)
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200"
+              >
+                <Crown size={20} />
+                Pro versiyaga o'tish
+              </button>
+            )}
           </div>
 
           {/* User info / Login button */}

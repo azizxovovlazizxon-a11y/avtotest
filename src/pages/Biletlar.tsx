@@ -17,6 +17,11 @@ export default function Biletlar() {
   const bilets = getBiletInfo()
   const biletStats = getBiletStatistics()
   const totalBilets = getTotalBilets()
+  
+  // Check if user has active premium (isPremium and not expired)
+  const isPremiumActive = user?.isPremium && (
+    !user?.proExpiresAt || new Date(user.proExpiresAt) > new Date()
+  )
 
   // Calculate statistics
   const completedBilets = Array.from(biletStats.values()).length
@@ -62,7 +67,7 @@ export default function Biletlar() {
     const bilet = bilets.find((b: BiletInfo) => b.id === biletId)
     if (!bilet) return
 
-    if (!bilet.isFree && !user?.isPremium) {
+    if (!bilet.isFree && !isPremiumActive) {
       navigate('/pro-versiya')
       return
     }
@@ -187,7 +192,7 @@ export default function Biletlar() {
               biletId={bilet.id}
               gradient={getGradient(index)}
               isFree={bilet.isFree}
-              isPremium={user?.isPremium ?? false}
+              isPremium={isPremiumActive ?? false}
               attempts={stats?.attempts ?? 0}
               lastScore={stats?.lastScore}
               onStart={() => handleStartBilet(bilet.id)}

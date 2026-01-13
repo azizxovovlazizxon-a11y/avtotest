@@ -1,11 +1,22 @@
 import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import Sidebar from './Sidebar'
+import { useAuthStore } from '../store/authStore'
 
 interface LayoutProps {
   children: React.ReactNode
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const { syncUserFromServer, isAuthenticated } = useAuthStore()
+  
+  // Sync user data from server on mount (to get latest Pro status)
+  useEffect(() => {
+    if (isAuthenticated) {
+      syncUserFromServer()
+    }
+  }, [isAuthenticated, syncUserFromServer])
+  
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Sidebar />

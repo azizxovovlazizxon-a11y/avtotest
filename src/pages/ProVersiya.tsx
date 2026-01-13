@@ -84,6 +84,11 @@ export default function ProVersiya() {
   const [promoCode, setPromoCode] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoError, setPromoError] = useState('')
+  
+  // Check if user has active premium (isPremium and not expired)
+  const isPremiumActive = user?.isPremium && (
+    !user?.proExpiresAt || new Date(user.proExpiresAt) > new Date()
+  )
 
   const handleSubscribe = (_planId: string) => {
     // TODO: Integrate with payment gateway (Payme, Click, Uzum)
@@ -141,14 +146,14 @@ export default function ProVersiya() {
       </p>
 
       {/* Premium status (if active) */}
-      {user?.isPremium && (
+      {isPremiumActive && (
         <div className="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-6 mb-8 text-white">
           <div className="flex items-center gap-3 mb-2">
             <Crown size={24} />
             <h2 className="text-xl font-bold">Siz Premium foydalanuvchisiz!</h2>
           </div>
           <p className="opacity-90">
-            Premium muddati: {user.premiumExpiresAt ? new Date(user.premiumExpiresAt).toLocaleDateString('uz-UZ') : 'Cheksiz'}
+            Premium muddati: {user?.proExpiresAt ? new Date(user.proExpiresAt).toLocaleDateString('uz-UZ') : 'Cheksiz'}
           </p>
         </div>
       )}

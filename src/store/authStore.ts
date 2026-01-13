@@ -18,6 +18,7 @@ interface AuthState {
   updateUser: (user: Partial<User>) => void
   incrementFreeAttempt: () => void
   canTakeExam: () => boolean
+  syncUserFromServer: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -105,8 +106,41 @@ export const useAuthStore = create<AuthState>()(
         // Premium users can always take exams
         if (user?.isPremium) return true
         
+        // Check if premium is still valid
+        if (user?.proExpiresAt && new Date(user.proExpiresAt) > new Date()) {
+          return true
+        }
+        
         // Everyone else gets only 1 free attempt
         return freeAttemptsUsed < 1
+      },
+
+      syncUserFromServer: async () => {
+        const token = localStorage.getItem('authToken')
+        if (!token) return
+        
+        try {
+          const response = await axios.post(`${API_URL}/api/auth/verify-token`, { token })
+          
+          if (response.data.success) {
+            const serverUser = response.data.user
+            const { user } = get()
+            
+            if (user) {
+              // Update user with server data (Pro status from admin panel)
+              set({
+                user: {
+                  ...user,
+                  isPremium: serverUser.isPro || false,
+                  proExpiresAt: serverUser.proExpiresAt || null,
+                }
+              })
+              console.log('✅ User synced from server:', serverUser.isPro ? 'Pro' : 'Free')
+            }
+          }
+        } catch (error) {
+          console.log('⚠️ Failed to sync user from server')
+        }
       },
     }),
     {

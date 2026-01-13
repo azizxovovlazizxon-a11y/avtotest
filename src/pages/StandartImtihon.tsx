@@ -18,6 +18,11 @@ export default function StandartImtihon() {
   const { startExam } = useExamStore()
 
   const canStartExam = canTakeExam()
+  
+  // Check if user has active premium
+  const isPremiumActive = user?.isPremium && (
+    !user?.proExpiresAt || new Date(user.proExpiresAt) > new Date()
+  )
 
   const handleStartExam = async () => {
     // Check if user can take exam (Premium or has free attempts)
@@ -35,7 +40,7 @@ export default function StandartImtihon() {
       await startExam('standard', questionCount)
       
       // Track free attempt usage if not premium
-      if (!user?.isPremium) {
+      if (!isPremiumActive) {
         incrementFreeAttempt()
       }
 
