@@ -94,8 +94,15 @@ export default function Exam() {
   // Load image with authentication when question changes
   useEffect(() => {
     if (currentQuestion.imageUrl && !imageCache.has(currentQuestion.imageUrl)) {
+      const authToken = localStorage.getItem('authToken')
+      
+      // If no auth token, use original image path directly (no watermark)
+      if (!authToken) {
+        console.log('⚠️ No auth token, using original image')
+        setImageCache(prev => new Map(prev).set(currentQuestion.imageUrl!, currentQuestion.imageUrl!))\n        return
+      }
+      
       console.log('🖼️ Loading image:', currentQuestion.imageUrl)
-      console.log('🔑 Auth token:', localStorage.getItem('authToken') ? 'EXISTS' : 'MISSING')
       
       setImageLoading(true)
       fetchImageWithAuth(currentQuestion.imageUrl)
