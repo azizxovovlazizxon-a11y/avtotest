@@ -4,6 +4,7 @@ export interface User {
   email: string
   isPremium: boolean
   premiumExpiresAt?: string
+  proExpiresAt?: string | null
   freeStandardAttempts: number
   freeRealAttempts: number
   createdAt: string
