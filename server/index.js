@@ -7,6 +7,7 @@ import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
 import rateLimit from 'express-rate-limit'
 import sharp from 'sharp'
+import { MongoClient } from 'mongodb'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -68,50 +69,88 @@ if (isBotConfigured) {
   console.log('⚠️  Telegram bot not configured (add token to .env to enable)')
 }
 
-// ===== PERSISTENT FILE STORAGE =====
-const DATA_FILE = join(__dirname, 'data.json')
+// ===== MONGODB DATABASE =====
+const MONGODB_URI = process.env.MONGODB_URI || ''
+let db = null
+let usersCollection = null
+let promoCodesCollection = null
 
-// Load data from file
-function loadData() {
-  try {
-    if (existsSync(DATA_FILE)) {
-      const data = JSON.parse(readFileSync(DATA_FILE, 'utf8'))
-      console.log(`✅ Loaded ${Object.keys(data.users || {}).length} users from database`)
-      return data
-    }
-  } catch (error) {
-    console.error('⚠️ Error loading data:', error.message)
-  }
-  return { users: {}, promoCodes: {} }
-}
-
-// Save data to file
-function saveData() {
-  try {
-    const data = {
-      users: Object.fromEntries(usersDatabase),
-      promoCodes: Object.fromEntries(promoCodes)
-    }
-    const fs = require('fs')
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8')
-    console.log(`💾 Saved ${usersDatabase.size} users to database`)
-  } catch (error) {
-    console.error('⚠️ Error saving data:', error.message)
-  }
-}
-
-// Initialize data
-const persistedData = loadData()
-
-// In-memory storage with persistence
+// In-memory storage (synced with MongoDB)
 const otpStore = new Map() // telegramId -> { otp, phone, name, expiresAt }
 const userSessions = new Map() // sessionToken -> { telegramId, phone, name }
-const usersDatabase = new Map(Object.entries(persistedData.users || {})) // telegramId -> user data
-const promoCodes = new Map(Object.entries(persistedData.promoCodes || {})) // code -> promo data
+let usersDatabase = new Map() // telegramId -> user data
+let promoCodes = new Map() // code -> promo data
 const adminSessions = new Map() // adminToken -> { username, loginAt }
 
-// Auto-save every 30 seconds
-setInterval(saveData, 30000)
+// Connect to MongoDB
+async function connectToMongoDB() {
+  if (!MONGODB_URI) {
+    console.log('⚠️  MONGODB_URI not set, using in-memory storage only')
+    return false
+  }
+  
+  try {
+    const client = new MongoClient(MONGODB_URI)
+    await client.connect()
+    db = client.db('avtotest')
+    usersCollection = db.collection('users')
+    promoCodesCollection = db.collection('promoCodes')
+    
+    // Load existing data from MongoDB
+    const users = await usersCollection.find({}).toArray()
+    users.forEach(user => {
+      usersDatabase.set(user.telegramId, user)
+    })
+    
+    const codes = await promoCodesCollection.find({}).toArray()
+    codes.forEach(code => {
+      promoCodes.set(code.code, code)
+    })
+    
+    console.log(`✅ Connected to MongoDB - Loaded ${users.length} users, ${codes.length} promo codes`)
+    return true
+  } catch (error) {
+    console.error('⚠️ MongoDB connection failed:', error.message)
+    return false
+  }
+}
+
+// Save user to MongoDB
+async function saveUser(telegramId, userData) {
+  usersDatabase.set(telegramId, userData)
+  if (usersCollection) {
+    try {
+      await usersCollection.updateOne(
+        { telegramId },
+        { $set: userData },
+        { upsert: true }
+      )
+      console.log(`💾 Saved user ${telegramId} to MongoDB`)
+    } catch (error) {
+      console.error('⚠️ Error saving user to MongoDB:', error.message)
+    }
+  }
+}
+
+// Save promo code to MongoDB
+async function savePromoCode(code, promoData) {
+  promoCodes.set(code, promoData)
+  if (promoCodesCollection) {
+    try {
+      await promoCodesCollection.updateOne(
+        { code },
+        { $set: promoData },
+        { upsert: true }
+      )
+      console.log(`💾 Saved promo code ${code} to MongoDB`)
+    } catch (error) {
+      console.error('⚠️ Error saving promo code to MongoDB:', error.message)
+    }
+  }
+}
+
+// Initialize MongoDB connection
+connectToMongoDB()
 
 // Admin credentials from environment variables
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
@@ -235,7 +274,7 @@ app.post('/api/auth/request-otp', (req, res) => {
 })
 
 // Verify OTP
-app.post('/api/auth/verify-otp', (req, res) => {
+app.post('/api/auth/verify-otp', async (req, res) => {
   const { otp } = req.body
   
   if (!otp || otp.length !== 6) {
@@ -273,7 +312,7 @@ app.post('/api/auth/verify-otp', (req, res) => {
   
   // Save or update user in database
   if (!usersDatabase.has(foundUser.telegramId)) {
-    usersDatabase.set(foundUser.telegramId, {
+    const newUser = {
       id: foundUser.telegramId,
       telegramId: foundUser.telegramId,
       phone: foundUser.phone,
@@ -282,13 +321,13 @@ app.post('/api/auth/verify-otp', (req, res) => {
       proExpiresAt: null,
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString()
-    })
-    saveData() // Persist new user
+    }
+    await saveUser(foundUser.telegramId, newUser)
   } else {
     // Update last login
     const user = usersDatabase.get(foundUser.telegramId)
     user.lastLoginAt = new Date().toISOString()
-    saveData() // Persist update
+    await saveUser(foundUser.telegramId, user)
   }
   
   userSessions.set(sessionToken, {
@@ -400,7 +439,7 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
 })
 
 // Admin API - Update user Pro status (protected)
-app.put('/api/admin/users/:telegramId/pro', requireAdmin, (req, res) => {
+app.put('/api/admin/users/:telegramId/pro', requireAdmin, async (req, res) => {
   const { telegramId } = req.params
   const { isPro, expirationDays } = req.body
   
@@ -421,8 +460,7 @@ app.put('/api/admin/users/:telegramId/pro', requireAdmin, (req, res) => {
     user.proExpiresAt = null
   }
   
-  usersDatabase.set(telegramId, user)
-  saveData() // Persist Pro status change
+  await saveUser(telegramId, user)
   
   res.json({
     success: true,
@@ -638,7 +676,7 @@ app.get('/api/images/:filename', authLimiter, async (req, res) => {
 // (promoCodes Map is initialized above with persistence)
 
 // Admin: Create promo code
-app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
+app.post('/api/admin/promocodes', requireAdmin, async (req, res) => {
   try {
     const { code, durationMonths, maxUses, expiresInDays } = req.body
 
@@ -669,8 +707,7 @@ app.post('/api/admin/promocodes', requireAdmin, (req, res) => {
       expiresAt: expiresAt.toISOString()
     }
 
-    promoCodes.set(promoCode.code, promoCode)
-    saveData() // Persist new promo code
+    await savePromoCode(promoCode.code, promoCode)
 
     res.json({
       success: true,
@@ -697,7 +734,7 @@ app.get('/api/admin/promocodes', requireAdmin, (req, res) => {
 })
 
 // Admin: Update promo code
-app.patch('/api/admin/promocodes/:code', requireAdmin, (req, res) => {
+app.patch('/api/admin/promocodes/:code', requireAdmin, async (req, res) => {
   try {
     const { code } = req.params
     const { isActive } = req.body
@@ -711,8 +748,7 @@ app.patch('/api/admin/promocodes/:code', requireAdmin, (req, res) => {
     }
 
     promoCode.isActive = isActive
-    promoCodes.set(code.toUpperCase(), promoCode)
-    saveData() // Persist promo code update
+    await savePromoCode(code.toUpperCase(), promoCode)
 
     res.json({
       success: true,
@@ -750,7 +786,7 @@ app.delete('/api/admin/promocodes/:code', requireAdmin, (req, res) => {
 })
 
 // User: Apply promo code
-app.post('/api/promo/apply', authLimiter, (req, res) => {
+app.post('/api/promo/apply', authLimiter, async (req, res) => {
   try {
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -810,8 +846,7 @@ app.post('/api/promo/apply', authLimiter, (req, res) => {
 
     // Apply promocode
     promoCode.usedCount++
-    promoCodes.set(promoCode.code, promoCode)
-    saveData() // Persist promo code usage
+    await savePromoCode(promoCode.code, promoCode)
 
     // Calculate expiration date
     const expiresAt = new Date()
