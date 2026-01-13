@@ -15,6 +15,8 @@ export default function AdminLogin() {
     setError('')
     setLoading(true)
 
+    console.log('Admin login attempt:', { username, password: '***' })
+
     try {
       const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/login', {
         method: 'POST',
@@ -24,18 +26,22 @@ export default function AdminLogin() {
         body: JSON.stringify({ username, password })
       })
 
+      console.log('Response status:', response.status)
       const data = await response.json()
+      console.log('Response data:', data)
 
       if (data.success) {
         // Save admin token to localStorage
         localStorage.setItem('adminToken', data.token)
         localStorage.setItem('adminUsername', data.admin.username)
+        console.log('Login successful, navigating to /admin')
         navigate('/admin')
       } else {
         setError(data.message || 'Noto\'g\'ri login yoki parol')
       }
     } catch (err) {
-      setError('Server bilan bog\'lanishda xatolik')
+      console.error('Login error:', err)
+      setError('Server bilan bog\'lanishda xatolik: ' + (err instanceof Error ? err.message : 'Unknown error'))
     } finally {
       setLoading(false)
     }
