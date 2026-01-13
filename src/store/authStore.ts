@@ -40,7 +40,8 @@ export const useAuthStore = create<AuthState>()(
               id: userData.id,
               name: userData.name,
               email: userData.phone,
-              isPremium: false,
+              isPremium: userData.isPro || false,
+              proExpiresAt: userData.proExpiresAt || null,
               freeStandardAttempts: 1,
               freeRealAttempts: 1,
               createdAt: new Date().toISOString(),
@@ -53,7 +54,7 @@ export const useAuthStore = create<AuthState>()(
               user, 
               token, 
               isAuthenticated: true,
-              freeAttemptsUsed: 0
+              freeAttemptsUsed: userData.isPro ? 0 : get().freeAttemptsUsed
             })
           }
         } catch (error: any) {

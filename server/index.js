@@ -292,13 +292,18 @@ app.post('/api/auth/verify-otp', (req, res) => {
   // Remove OTP from store
   otpStore.delete(foundUser.telegramId)
   
+  // Get user from database to include isPro status
+  const dbUser = usersDatabase.get(foundUser.telegramId)
+  
   res.json({
     success: true,
     token: sessionToken,
     user: {
       id: foundUser.telegramId,
       name: foundUser.name,
-      phone: foundUser.phone
+      phone: foundUser.phone,
+      isPro: dbUser?.isPro || false,
+      proExpiresAt: dbUser?.proExpiresAt || null
     }
   })
 })
@@ -315,12 +320,17 @@ app.post('/api/auth/verify-token', (req, res) => {
     })
   }
   
+  // Get user from database to include isPro status
+  const dbUser = usersDatabase.get(session.telegramId)
+  
   res.json({
     success: true,
     user: {
       id: session.telegramId,
       name: session.name,
-      phone: session.phone
+      phone: session.phone,
+      isPro: dbUser?.isPro || false,
+      proExpiresAt: dbUser?.proExpiresAt || null
     }
   })
 })
