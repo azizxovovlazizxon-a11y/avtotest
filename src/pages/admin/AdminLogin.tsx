@@ -23,7 +23,8 @@ export default function AdminLogin() {
       const clientToken = `admin_client_${Date.now()}_${Math.random().toString(36).substr(2)}`
       localStorage.setItem('adminToken', clientToken)
       localStorage.setItem('adminUsername', 'admin')
-      navigate('/admin')
+      // Use window.location to force full page reload
+      window.location.href = '/admin'
       return
     }
 

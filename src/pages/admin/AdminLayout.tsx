@@ -25,13 +25,14 @@ const adminMenuItems = [
 export default function AdminLayout() {
   const navigate = useNavigate()
 
-  // Check if admin is logged in
+  // Check if admin is logged in - only on mount
   useEffect(() => {
     const adminToken = localStorage.getItem('adminToken')
+    console.log('AdminLayout check - token:', adminToken)
     if (!adminToken) {
-      navigate('/admin/login')
+      navigate('/admin/login', { replace: true })
     }
-  }, [navigate])
+  }, [])
 
   const handleLogout = async () => {
     if (confirm('Admin paneldan chiqmoqchimisiz?')) {

@@ -27,8 +27,9 @@ import AdminData from './pages/admin/AdminData'
 import AdminSettings from './pages/admin/AdminSettings'
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin } = useAuthStore()
-  return isAdmin ? <>{children}</> : <Navigate to="/admin/login" />
+  // Check localStorage directly for admin token
+  const adminToken = localStorage.getItem('adminToken')
+  return adminToken ? <>{children}</> : <Navigate to="/admin/login" />
 }
 
 function App() {
