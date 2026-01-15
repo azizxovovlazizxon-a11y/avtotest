@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Question } from '../types'
-import { questions as realQuestions, getTotalBilets } from '../data/questions'
+
+// Total bilets count (not from local file since it's truncated for security)
+const TOTAL_BILETS = 111
+const QUESTIONS_PER_BILET = 10
 
 interface AdminQuestion extends Question {
   createdAt: string
@@ -36,29 +39,29 @@ interface AdminStore {
   
   // Bulk operations
   importQuestions: (questions: Omit<AdminQuestion, 'id' | 'createdAt' | 'updatedAt'>[]) => void
+  
+  // Load questions from server
+  loadQuestionsFromServer: () => Promise<void>
+  isLoading: boolean
 }
 
-// Generate initial questions from real extracted data
+// Generate initial questions - empty, will be loaded from API
 const generateInitialQuestions = (): AdminQuestion[] => {
-  const now = new Date().toISOString()
-  return realQuestions.map(q => ({
-    ...q,
-    createdAt: now,
-    updatedAt: now,
-  }))
+  // Questions will be fetched from server API
+  // This is just a placeholder - admin should fetch from /api/admin/questions
+  return []
 }
 
 // Generate initial bilets based on real data (111 bilets, 10 questions each)
 const generateInitialBilets = (): Bilet[] => {
   const bilets: Bilet[] = []
-  const totalBilets = getTotalBilets()
-  for (let i = 1; i <= totalBilets; i++) {
+  for (let i = 1; i <= TOTAL_BILETS; i++) {
     // Each bilet has 10 questions
-    const startId = (i - 1) * 10 + 1
+    const startId = (i - 1) * QUESTIONS_PER_BILET + 1
     bilets.push({
       id: i,
       name: `Bilet #${i}`,
-      questionIds: Array.from({ length: 10 }, (_, j) => startId + j),
+      questionIds: Array.from({ length: QUESTIONS_PER_BILET }, (_, j) => startId + j),
       isActive: true,
     })
   }
@@ -155,17 +158,55 @@ export const useAdminStore = create<AdminStore>()(
           nextQuestionId: nextId,
         }))
       },
+
+      // Load questions from server API
+      loadQuestionsFromServer: async () => {
+        set({ isLoading: true })
+        try {
+          const adminToken = localStorage.getItem('adminToken')
+          const response = await fetch('https://avtotest-8t98.onrender.com/api/admin/questions', {
+            headers: {
+              'Authorization': `Bearer ${adminToken}`
+            }
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            const now = new Date().toISOString()
+            const questions = data.questions.map((q: Question) => ({
+              ...q,
+              createdAt: now,
+              updatedAt: now,
+            }))
+            set({ 
+              questions,
+              isLoading: false,
+              nextQuestionId: Math.max(...questions.map((q: AdminQuestion) => q.id)) + 1
+            })
+            console.log(`✅ Loaded ${questions.length} questions from server`)
+          } else {
+            console.error('Failed to load questions from server')
+            set({ isLoading: false })
+          }
+        } catch (error) {
+          console.error('Error loading questions:', error)
+          set({ isLoading: false })
+        }
+      },
+
+      isLoading: false,
     }),
     {
       name: 'avtotest-admin-storage',
-      version: 2, // Increment version to force localStorage reset with real questions
+      version: 3, // Increment version to force reload from API
       migrate: (persistedState: unknown, version: number) => {
-        // If old version, discard old data and use fresh real questions
-        if (version < 2) {
+        // Force reload from API on version change
+        if (version < 3) {
           return {
-            questions: generateInitialQuestions(),
+            questions: [],
             bilets: generateInitialBilets(),
             nextQuestionId: 2000,
+            isLoading: false,
           }
         }
         return persistedState as AdminStore

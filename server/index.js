@@ -508,6 +508,15 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
   })
 })
 
+// Admin API - Get all questions (protected)
+app.get('/api/admin/questions', requireAdmin, (req, res) => {
+  res.json({
+    success: true,
+    questions: questionsData,
+    totalCount: questionsData.length
+  })
+})
+
 // Admin API - Update user Pro status (protected)
 app.put('/api/admin/users/:telegramId/pro', requireAdmin, async (req, res) => {
   const { telegramId } = req.params

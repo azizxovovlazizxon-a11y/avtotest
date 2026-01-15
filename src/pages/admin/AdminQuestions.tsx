@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Plus, 
   Search, 
@@ -9,12 +9,20 @@ import {
   ChevronRight,
   X,
   Save,
-  Upload
+  Upload,
+  RefreshCw
 } from 'lucide-react'
 import { useAdminStore } from '../../store/adminStore'
 
 export default function AdminQuestions() {
-  const { questions, addQuestion, updateQuestion, deleteQuestion } = useAdminStore()
+  const { questions, addQuestion, updateQuestion, deleteQuestion, loadQuestionsFromServer, isLoading } = useAdminStore()
+  
+  // Load questions from server on mount if empty
+  useEffect(() => {
+    if (questions.length === 0) {
+      loadQuestionsFromServer()
+    }
+  }, [])
   
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -165,17 +173,38 @@ export default function AdminQuestions() {
     setFormData({ ...formData, options: newOptions })
   }
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <RefreshCw className="animate-spin mx-auto text-teal-500 mb-4" size={40} />
+          <p className="text-slate-600">Savollar yuklanmoqda...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Savollar boshqaruvi</h1>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-xl transition-colors"
-        >
-          <Plus size={20} />
-          Yangi savol
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => loadQuestionsFromServer()}
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-xl transition-colors"
+          >
+            <RefreshCw size={20} />
+            Yangilash
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-xl transition-colors"
+          >
+            <Plus size={20} />
+            Yangi savol
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
