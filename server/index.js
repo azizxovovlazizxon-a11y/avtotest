@@ -139,7 +139,8 @@ async function connectToMongoDB() {
       })
     })
     
-    console.log(`✅ Connected to MongoDB - Loaded ${users.length} users, ${codes.length} promo codes, ${sessions.length} sessions`)
+    console.log(`✅ Connected to MongoDB - Loaded ${users.length} users, ${codes.length} promo codes, ${sessions.length} active sessions`)
+    console.log(`📋 Active sessions restored - users won't need to re-login after restart!`)
     return true
   } catch (error) {
     console.error('⚠️ MongoDB connection failed:', error.message)
