@@ -1,7 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ExamResult, ExamSession, Question } from '../types'
-import { fetchBiletQuestions, fetchRandomQuestions } from '../services/api'
+import { getBiletQuestions, getRandomQuestions } from '../data/questions'
+import { fetchBiletQuestions } from '../services/api'
+
+// Free bilets that don't require authentication
+const FREE_BILETS = [1, 2, 3, 4, 5]
 
 interface ExamState {
   currentSession: ExamSession | null
@@ -35,11 +39,20 @@ export const useExamStore = create<ExamState>()(
           let questions: Question[]
           
           if (examType === 'bilet' && biletId !== undefined) {
-            // For bilet exams: fetch questions from API (requires auth for bilets > 5)
-            questions = await fetchBiletQuestions(biletId)
+            // Check if this is a free bilet
+            if (FREE_BILETS.includes(biletId)) {
+              // Free bilets: use local questions (no auth needed)
+              questions = getBiletQuestions(biletId)
+              if (questions.length === 0) {
+                throw new Error('Bilet topilmadi')
+              }
+            } else {
+              // Premium bilets: fetch from API (requires auth)
+              questions = await fetchBiletQuestions(biletId)
+            }
           } else {
-            // For standard and real exams: fetch random questions
-            questions = await fetchRandomQuestions(questionCount)
+            // For standard and real exams: use local random questions
+            questions = getRandomQuestions(questionCount)
           }
 
           const session: ExamSession = {
