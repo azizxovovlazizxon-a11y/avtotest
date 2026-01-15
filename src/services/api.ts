@@ -106,12 +106,15 @@ export const fetchBiletQuestions = async (biletId: number): Promise<Question[]> 
   })
 
   if (!response.ok) {
+    console.error(`❌ Bilet ${biletId} fetch failed:`, response.status, response.statusText)
+    let errorMessage = 'Savollarni yuklashda xatolik'
     try {
       const data = await response.json()
-      throw new Error(data.message || 'Savollarni yuklashda xatolik')
+      errorMessage = data.message || errorMessage
     } catch (e) {
-      throw new Error('Savollarni yuklashda xatolik')
+      // JSON parse failed, use default message
     }
+    throw new Error(errorMessage)
   }
 
   const data = await response.json()

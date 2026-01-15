@@ -101,6 +101,7 @@ const userSessions = new Map() // sessionToken -> { telegramId, phone, name }
 let usersDatabase = new Map() // telegramId -> user data
 let promoCodes = new Map() // code -> promo data
 const adminSessions = new Map() // adminToken -> { username, loginAt }
+let sessionsCollection = null // MongoDB sessions collection
 
 // Connect to MongoDB
 async function connectToMongoDB() {
@@ -115,6 +116,7 @@ async function connectToMongoDB() {
     db = client.db('avtotest')
     usersCollection = db.collection('users')
     promoCodesCollection = db.collection('promoCodes')
+    sessionsCollection = db.collection('sessions')
     
     // Load existing data from MongoDB
     const users = await usersCollection.find({}).toArray()
@@ -127,11 +129,51 @@ async function connectToMongoDB() {
       promoCodes.set(code.code, code)
     })
     
-    console.log(`✅ Connected to MongoDB - Loaded ${users.length} users, ${codes.length} promo codes`)
+    // Load existing sessions from MongoDB (restore after server restart)
+    const sessions = await sessionsCollection.find({}).toArray()
+    sessions.forEach(session => {
+      userSessions.set(session.token, {
+        telegramId: session.telegramId,
+        phone: session.phone,
+        name: session.name
+      })
+    })
+    
+    console.log(`✅ Connected to MongoDB - Loaded ${users.length} users, ${codes.length} promo codes, ${sessions.length} sessions`)
     return true
   } catch (error) {
     console.error('⚠️ MongoDB connection failed:', error.message)
     return false
+  }
+}
+
+// Save session to MongoDB
+async function saveSession(token, sessionData) {
+  userSessions.set(token, sessionData)
+  if (sessionsCollection) {
+    try {
+      await sessionsCollection.updateOne(
+        { token },
+        { $set: { token, ...sessionData, updatedAt: new Date() } },
+        { upsert: true }
+      )
+      console.log(`💾 Saved session for ${sessionData.telegramId} to MongoDB`)
+    } catch (error) {
+      console.error('⚠️ Error saving session to MongoDB:', error.message)
+    }
+  }
+}
+
+// Delete session from MongoDB
+async function deleteSession(token) {
+  userSessions.delete(token)
+  if (sessionsCollection) {
+    try {
+      await sessionsCollection.deleteOne({ token })
+      console.log(`🗑️ Deleted session from MongoDB`)
+    } catch (error) {
+      console.error('⚠️ Error deleting session from MongoDB:', error.message)
+    }
   }
 }
 
@@ -356,6 +398,13 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     name: foundUser.name
   })
   
+  // Save session to MongoDB for persistence across server restarts
+  await saveSession(sessionToken, {
+    telegramId: foundUser.telegramId,
+    phone: foundUser.phone,
+    name: foundUser.name
+  })
+  
   // Remove OTP from store
   otpStore.delete(foundUser.telegramId)
   
@@ -403,9 +452,9 @@ app.post('/api/auth/verify-token', (req, res) => {
 })
 
 // Logout
-app.post('/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', async (req, res) => {
   const { token } = req.body
-  userSessions.delete(token)
+  await deleteSession(token)
   
   res.json({
     success: true,
