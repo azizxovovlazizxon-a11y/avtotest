@@ -68,11 +68,35 @@ export const fetchBiletInfo = async () => {
   return data.bilets
 }
 
-// Get questions for a specific bilet
+// Cache for premium bilet questions (24 hours)
+const CACHE_KEY = 'bilet_questions_cache'
+const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+
+interface CacheEntry {
+  questions: Question[]
+  timestamp: number
+}
+
+// Get questions for a specific bilet (with caching)
 export const fetchBiletQuestions = async (biletId: number): Promise<Question[]> => {
   const token = getAuthToken()
   if (!token) {
     throw new Error('Avtorizatsiya talab qilinadi')
+  }
+
+  // Check cache first
+  const cacheKey = `${CACHE_KEY}_${biletId}`
+  try {
+    const cached = localStorage.getItem(cacheKey)
+    if (cached) {
+      const entry: CacheEntry = JSON.parse(cached)
+      if (Date.now() - entry.timestamp < CACHE_DURATION) {
+        console.log(`✅ Using cached questions for bilet ${biletId}`)
+        return entry.questions
+      }
+    }
+  } catch (e) {
+    // Cache read failed, continue with API call
   }
 
   const response = await fetch(`${API_URL}/api/questions/bilet/${biletId}`, {
@@ -91,7 +115,20 @@ export const fetchBiletQuestions = async (biletId: number): Promise<Question[]> 
   }
 
   const data = await response.json()
-  return data.questions
+  const questions = data.questions
+
+  // Save to cache
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify({
+      questions,
+      timestamp: Date.now()
+    }))
+    console.log(`💾 Cached questions for bilet ${biletId}`)
+  } catch (e) {
+    // Cache write failed (storage full), ignore
+  }
+
+  return questions
 }
 
 // Get random questions for exam (no auth needed for random questions)

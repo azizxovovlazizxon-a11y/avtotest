@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import Layout from './components/Layout'
 import TelegramAuth from './pages/TelegramAuth'
 import BoshSahifa from './pages/BoshSahifa'
@@ -25,6 +26,16 @@ import AdminPromoCodes from './pages/admin/AdminPromoCodes'
 import AdminData from './pages/admin/AdminData'
 import AdminSettings from './pages/admin/AdminSettings'
 
+// Keep-alive ping to prevent Render.com free tier from sleeping
+const API_URL = 'https://avtotest-8t98.onrender.com'
+const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000 // 14 minutes
+
+const keepAlive = () => {
+  fetch(`${API_URL}/api/health`, { method: 'GET' })
+    .then(() => console.log('✅ Server keep-alive ping sent'))
+    .catch(() => console.log('⚠️ Server might be waking up...'))
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   // Check localStorage directly for admin token
   const adminToken = localStorage.getItem('adminToken')
@@ -32,6 +43,17 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  // Keep server alive while user is on the site
+  useEffect(() => {
+    // Ping immediately on load to wake up server
+    keepAlive()
+    
+    // Then ping every 14 minutes to keep it awake
+    const interval = setInterval(keepAlive, KEEP_ALIVE_INTERVAL)
+    
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <Router>
       <Routes>
