@@ -8,6 +8,16 @@ const getAuthToken = (): string | null => {
   return localStorage.getItem('authToken')
 }
 
+// Handle 401 errors by clearing invalid session
+const handleUnauthorized = () => {
+  console.log('🔒 Unauthorized - clearing session')
+  localStorage.removeItem('authToken')
+  // Clear zustand auth state
+  localStorage.removeItem('avtotest-auth')
+  // Reload to trigger re-login prompt
+  window.location.reload()
+}
+
 // Get image URL with authentication
 export const getImageUrl = (imageUrl: string): string => {
   // Extract filename from path like "/images/questions/i1_1.webp"
@@ -107,6 +117,13 @@ export const fetchBiletQuestions = async (biletId: number): Promise<Question[]> 
 
   if (!response.ok) {
     console.error(`❌ Bilet ${biletId} fetch failed:`, response.status, response.statusText)
+    
+    // Handle unauthorized - session expired
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error('Sessiya tugagan. Qaytadan kiring.')
+    }
+    
     let errorMessage = 'Savollarni yuklashda xatolik'
     try {
       const data = await response.json()

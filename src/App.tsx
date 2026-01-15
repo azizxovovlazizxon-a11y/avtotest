@@ -14,6 +14,7 @@ import ExamResults from './pages/ExamResults'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 import About from './pages/About'
+import { useAuthStore } from './store/authStore'
 
 // Admin pages
 import AdminLayout from './pages/admin/AdminLayout'
@@ -29,6 +30,28 @@ import AdminSettings from './pages/admin/AdminSettings'
 // Keep-alive ping to prevent Render.com free tier from sleeping
 const API_URL = 'https://avtotest-8t98.onrender.com'
 
+// Validate session on app load - auto logout if session is invalid
+async function validateSession(): Promise<boolean> {
+  const token = localStorage.getItem('authToken')
+  if (!token) return false
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/verify-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    })
+    
+    if (!response.ok) {
+      console.log('⚠️ Session invalid - logging out')
+      return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   // Check localStorage directly for admin token
   const adminToken = localStorage.getItem('adminToken')
@@ -36,13 +59,27 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  // Wake up server on first load only (not repeatedly)
+  const { logout, isAuthenticated } = useAuthStore()
+
+  // Validate session on app load
   useEffect(() => {
-    // Single ping on load to wake up server if sleeping
+    // Wake up server
     fetch(`${API_URL}/api/health`, { method: 'GET' })
       .then(() => console.log('✅ Server is awake'))
       .catch(() => console.log('⚠️ Server is waking up...'))
-  }, [])
+    
+    // Validate session if user appears to be logged in
+    if (isAuthenticated) {
+      validateSession().then(isValid => {
+        if (!isValid) {
+          console.log('🔒 Session expired - auto logout')
+          logout()
+          // Show message to user
+          alert('Sessiyangiz tugagan. Iltimos, qaytadan kiring.')
+        }
+      })
+    }
+  }, [isAuthenticated, logout])
 
   return (
     <Router>
