@@ -28,13 +28,6 @@ import AdminSettings from './pages/admin/AdminSettings'
 
 // Keep-alive ping to prevent Render.com free tier from sleeping
 const API_URL = 'https://avtotest-8t98.onrender.com'
-const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000 // 14 minutes
-
-const keepAlive = () => {
-  fetch(`${API_URL}/api/health`, { method: 'GET' })
-    .then(() => console.log('✅ Server keep-alive ping sent'))
-    .catch(() => console.log('⚠️ Server might be waking up...'))
-}
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   // Check localStorage directly for admin token
@@ -43,15 +36,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  // Keep server alive while user is on the site
+  // Wake up server on first load only (not repeatedly)
   useEffect(() => {
-    // Ping immediately on load to wake up server
-    keepAlive()
-    
-    // Then ping every 14 minutes to keep it awake
-    const interval = setInterval(keepAlive, KEEP_ALIVE_INTERVAL)
-    
-    return () => clearInterval(interval)
+    // Single ping on load to wake up server if sleeping
+    fetch(`${API_URL}/api/health`, { method: 'GET' })
+      .then(() => console.log('✅ Server is awake'))
+      .catch(() => console.log('⚠️ Server is waking up...'))
   }, [])
 
   return (

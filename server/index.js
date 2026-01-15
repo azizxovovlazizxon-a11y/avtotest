@@ -26,16 +26,19 @@ dotenv.config({ path: join(__dirname, '.env') })
 
 const app = express()
 
-// Rate limiting
+// Rate limiting - increased limits for production
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
-  message: 'Juda ko\'p so\'rov yuborildi, iltimos keyinroq urinib ko\'ring'
+  max: 500, // Limit each IP to 500 requests per window
+  message: 'Juda ko\'p so\'rov yuborildi, iltimos keyinroq urinib ko\'ring',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health' // Don't rate limit health checks
 })
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30, // Limit auth attempts - increased to allow normal usage
+  max: 50, // Limit auth attempts
   message: 'Juda ko\'p autentifikatsiya urinishi, 15 daqiqa kuting'
 })
 
